@@ -89,7 +89,7 @@ def login():
         cursor = g.conn.execute(s, username=form.username.data, password=form.password.data)
         names = []
         if cursor.rowcount == 1:
-          return render_template('index.html')
+          return redirect('/')
         cursor.close()
     return render_template('login.html', title='Sign In', form=form)
 
