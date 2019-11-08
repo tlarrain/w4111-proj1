@@ -9,6 +9,16 @@
 
 <body>
   <h1>Welcome to the ML research finder!</h1>
+{% block content %}
+    <form action="" method="post" novalidate>
+        {{ search_form.hidden_tag() }}
+        <p>
+            {{ search_form.searchTerms.label }}<br>
+            {{ search_form.searchTerms(size=32) }}
+        </p>
+        <p>{{ search_form.submit() }}</p>
+    </form>
+{% endblock %}
 </body>
 
 

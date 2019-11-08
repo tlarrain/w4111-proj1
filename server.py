@@ -14,30 +14,13 @@ from sqlalchemy import *
 from sqlalchemy.sql import text
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, flash, render_template, g, redirect, Response
-from forms import LoginForm
+from forms import LoginForm, SearchForm
+
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 app.config['SECRET_KEY'] = 'you-will-never-guess'
-
-#
-# The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
-#
-# XXX: The URI should be in the format of: 
-#
-#     postgresql://USER:PASSWORD@35.243.220.243/proj1part2
-#
-# For example, if you had username gravano and password foobar, then the following line would be:
-#
-#     DATABASEURI = "postgresql://gravano:foobar@35.243.220.243/proj1part2"
-#
 DATABASEURI = "postgresql://tal2150:7764@35.243.220.243/proj1part2"
-
-
-#
-# This line creates a database engine that knows how to connect to the URI above.
-#
 engine = create_engine(DATABASEURI)
-
 
 @app.before_request
 def before_request():
@@ -52,7 +35,8 @@ def before_request():
     g.conn = engine.connect()
   except:
     print("uh oh, problem connecting to database")
-    import traceback; traceback.print_exc()
+    import traceback
+    traceback.print_exc()
     g.conn = None
 
 @app.teardown_request
@@ -65,7 +49,6 @@ def teardown_request(exception):
     g.conn.close()
   except Exception as e:
     pass
-
 
 #
 # @app.route is a decorator around index() that means:
@@ -93,7 +76,7 @@ def login():
         cursor.close()
     return render_template('login.html', title='Sign In', form=form)
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
   """
   request is a special object that Flask provides to access web request information:
@@ -104,78 +87,28 @@ def index():
 
   See its API: http://flask.pocoo.org/docs/0.10/api/#incoming-request-data
   """
+  search_form = SearchForm()
+  if search_form.validate_on_submit():
+    return search_results(search_form.searchTerms.data)
+  return render_template('index.html', title='Home', search_form=search_form)
 
-  # DEBUG: this is debugging code to see what request looks like
-  print(request.args)
 
-
-  #
-  # example of a database query
-  #
-  cursor = g.conn.execute("""SELECT PI.name, count(PI.name)
-FROM (
-  SELECT P.purl, I.name
-  FROM 
-    Papers P INNER JOIN Published_By PB ON P.purl = PB.purl
-    INNER JOIN Works_At WA ON PB.aid = WA.aid
-    INNER JOIN Institutions I ON I.iid = WA.iid
-  WHERE P.model = 'Deep-Learning'
-  GROUP BY I.name, P.purl
-) as PI
-GROUP BY PI.name
-ORDER BY count(PI.name) DESC;""")
-  names = []
+@app.route('/results')
+def search_results(search):
+  s = text("""
+      SELECT  P.title, PO.url, PO.purl
+      FROM Published_On PO INNER JOIN Papers P ON PO.purl = P.purl
+      WHERE PO.purl IN (
+        SELECT I.purl
+        FROM Is_Related_To I
+        WHERE I.keyword in :keywords
+      ); 
+          """)
+  cursor = g.conn.execute(s, keywords=tuple(search.split(' ')))
+  results = []
   for result in cursor:
-    names.append(result['name'])
-  cursor.close()
-
-  #
-  # Flask uses Jinja templates, which is an extension to HTML where you can
-  # pass data to a template and dynamically generate HTML based on the data
-  # (you can think of it as simple PHP)
-  # documentation: https://realpython.com/blog/python/primer-on-jinja-templating/
-  #
-  # You can see an example template in templates/index.html
-  #
-  # context are the variables that are passed to the template.
-  # for example, "data" key in the context variable defined below will be 
-  # accessible as a variable in index.html:
-  #
-  #     # will print: [u'grace hopper', u'alan turing', u'ada lovelace']
-  #     <div>{{data}}</div>
-  #     
-  #     # creates a <div> tag for each element in data
-  #     # will print: 
-  #     #
-  #     #   <div>grace hopper</div>
-  #     #   <div>alan turing</div>
-  #     #   <div>ada lovelace</div>
-  #     #
-  #     {% for n in data %}
-  #     <div>{{n}}</div>
-  #     {% endfor %}
-  #
-  context = dict(data = names)
-
-
-  #
-  # render_template looks in the templates/ folder for files.
-  # for example, the below file reads template/index.html
-  #
-  return render_template("index.html", **context)
-
-#
-# This is an example of a different path.  You can see it at:
-# 
-#     localhost:8111/another
-#
-# Notice that the function name is another() rather than index()
-# The functions for each app.route need to have different names
-#
-@app.route('/another')
-def another():
-  return render_template("another.html")
-
+    results.append(result)
+  return render_template('results.html', results=results)
 
 # Example of adding new data to the database
 @app.route('/add', methods=['POST'])
@@ -183,6 +116,9 @@ def add():
   name = request.form['name']
   g.conn.execute('INSERT INTO test(name) VALUES (%s)', name)
   return redirect('/')
+
+def convert_string_to_query_array(string):
+  return str(string.split(' ')).replace('[', '(').replace(']', ')')
 
 if __name__ == "__main__":
   import click

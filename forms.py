@@ -6,3 +6,7 @@ class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Sign In')
+
+class SearchForm(FlaskForm):
+    searchTerms = StringField('Type your search', validators=[DataRequired()])
+    submit = SubmitField('Go!')
