@@ -11,12 +11,13 @@ Read about it online.
 import os
   # accessible as a variable in index.html:
 from sqlalchemy import *
+from sqlalchemy.sql import text
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response
-
+from flask import Flask, request, flash, render_template, g, redirect, Response
+from forms import LoginForm
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
-
+app.config['SECRET_KEY'] = 'you-will-never-guess'
 
 #
 # The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
@@ -29,23 +30,13 @@ app = Flask(__name__, template_folder=tmpl_dir)
 #
 #     DATABASEURI = "postgresql://gravano:foobar@35.243.220.243/proj1part2"
 #
-DATABASEURI = "postgresql://user:password@35.243.220.243/proj1part2"
+DATABASEURI = "postgresql://tal2150:7764@35.243.220.243/proj1part2"
 
 
 #
 # This line creates a database engine that knows how to connect to the URI above.
 #
 engine = create_engine(DATABASEURI)
-
-#
-# Example of running queries in your database
-# Note that this will probably not work if you already have a table named 'test' in your database, containing meaningful data. This is only an example showing you how to run queries in your database using SQLAlchemy.
-#
-engine.execute("""CREATE TABLE IF NOT EXISTS test (
-  id serial,
-  name text
-);""")
-engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
 
 
 @app.before_request
@@ -89,6 +80,19 @@ def teardown_request(exception):
 # see for routing: http://flask.pocoo.org/docs/0.10/quickstart/#routing
 # see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
 #
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        s = text("SELECT * FROM Users U WHERE U.user_name = :username AND U.password = :password")
+        cursor = g.conn.execute(s, username=form.username.data, password=form.password.data)
+        names = []
+        if cursor.rowcount == 1:
+          return render_template('index.html')
+        cursor.close()
+    return render_template('login.html', title='Sign In', form=form)
+
 @app.route('/')
 def index():
   """
@@ -108,10 +112,21 @@ def index():
   #
   # example of a database query
   #
-  cursor = g.conn.execute("SELECT name FROM test")
+  cursor = g.conn.execute("""SELECT PI.name, count(PI.name)
+FROM (
+  SELECT P.purl, I.name
+  FROM 
+    Papers P INNER JOIN Published_By PB ON P.purl = PB.purl
+    INNER JOIN Works_At WA ON PB.aid = WA.aid
+    INNER JOIN Institutions I ON I.iid = WA.iid
+  WHERE P.model = 'Deep-Learning'
+  GROUP BY I.name, P.purl
+) as PI
+GROUP BY PI.name
+ORDER BY count(PI.name) DESC;""")
   names = []
   for result in cursor:
-    names.append(result['name'])  # can also be accessed using result[0]
+    names.append(result['name'])
   cursor.close()
 
   #
@@ -168,13 +183,6 @@ def add():
   name = request.form['name']
   g.conn.execute('INSERT INTO test(name) VALUES (%s)', name)
   return redirect('/')
-
-
-@app.route('/login')
-def login():
-    abort(401)
-    this_is_never_executed()
-
 
 if __name__ == "__main__":
   import click
