@@ -92,6 +92,9 @@ def index():
 
   See its API: http://flask.pocoo.org/docs/0.10/api/#incoming-request-data
   """
+  global USER
+  if not USER:
+    return redirect('/login')
   search_form = SearchForm()
   if search_form.validate_on_submit():
     return search_results(search_form.searchTerms.data)
@@ -149,12 +152,20 @@ def paper_details(purl):
 def store_history(purl):
   today = datetime.datetime.now().date()
   global USER
+  get_query = text("""
+  SELECT * FROM Have_Read HR
+  WHERE HR.user_name = :user_name AND HR.purl = :purl AND HR.date = :date;
+  """)
+  get_cursor = g.conn.execute(get_query, user_name=USER.user_name, purl=purl, date=today)
+  result = get_cursor.fetchone()
+  if result:
+    return
   insert_query = text("""
   INSERT INTO Have_Read(user_name, purl, date)
   VALUES (:user_name, :purl, :date);
   """)
-  cursor = g.conn.execute(insert_query, user_name=USER.user_name, purl=purl, date=today)
-  cursor.close()
+  insert_cursor = g.conn.execute(insert_query, user_name=USER.user_name, purl=purl, date=today)
+  insert_cursor.close()
 
 if __name__ == "__main__":
   import click
