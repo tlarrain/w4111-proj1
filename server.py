@@ -15,12 +15,15 @@ from sqlalchemy.sql import text
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, flash, render_template, g, redirect, Response
 from forms import LoginForm, SearchForm
+import datetime
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 app.config['SECRET_KEY'] = 'you-will-never-guess'
 DATABASEURI = "postgresql://tal2150:7764@35.243.220.243/proj1part2"
 engine = create_engine(DATABASEURI)
+
+USER = {}
 
 @app.before_request
 def before_request():
@@ -66,12 +69,14 @@ def teardown_request(exception):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    global USER
     form = LoginForm()
     if form.validate_on_submit():
         s = text("SELECT * FROM Users U WHERE U.user_name = :username AND U.password = :password")
         cursor = g.conn.execute(s, username=form.username.data, password=form.password.data)
         names = []
         if cursor.rowcount == 1:
+          USER = cursor.fetchone()
           return redirect('/')
         cursor.close()
     return render_template('login.html', title='Sign In', form=form)
@@ -96,9 +101,9 @@ def index():
 @app.route('/results')
 def search_results(search):
   s = text("""
-      SELECT  P.title, PO.url, PO.purl
-      FROM Published_On PO INNER JOIN Papers P ON PO.purl = P.purl
-      WHERE PO.purl IN (
+      SELECT  P.title, P.purl
+      FROM Papers P
+      WHERE P.purl IN (
         SELECT I.purl
         FROM Is_Related_To I
         WHERE I.keyword in :keywords
@@ -107,18 +112,49 @@ def search_results(search):
   cursor = g.conn.execute(s, keywords=tuple(search.split(' ')))
   results = []
   for result in cursor:
+    result = {"title": result[0], "purl": result[1].replace('/', '_slash_').replace('?','_qmark_')}
     results.append(result)
+  cursor.close()
   return render_template('results.html', results=results)
 
-# Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add():
-  name = request.form['name']
-  g.conn.execute('INSERT INTO test(name) VALUES (%s)', name)
-  return redirect('/')
+@app.route('/details/<purl>', methods=['GET', 'POST'])
+def paper_details(purl):
+  purl = purl.replace('_slash_', '/').replace('_qmark_', '?')
+  try:
+    store_history(purl)
+  except:
+    pass
+  s = text("""
+        SELECT  P.title, P.purl, P.model, PO.url
+        FROM Papers P LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
+        WHERE P.purl = :purl;
+      """)
+  cursor = g.conn.execute(s, purl=purl)
+  paper = cursor.fetchone()
+  s = text("""
+      SELECT  PB.aid, A.first_name, A.last_name, I.name
+      FROM Papers P RIGHT OUTER JOIN Published_by PB ON P.purl = PB.purl
+      INNER JOIN Authors A ON PB.aid = A.aid
+      INNER JOIN Works_At WA ON WA.aid = A.aid
+      INNER JOIN Institutions I ON I.iid = WA.iid
+      WHERE P.purl = :purl;
+    """)
+  cursor = g.conn.execute(s, purl=purl)
+  authors = []
+  for c in cursor:
+    authors.append(c)
+  cursor.close()
+  return render_template('details.html', paper=paper, authors=authors)
 
-def convert_string_to_query_array(string):
-  return str(string.split(' ')).replace('[', '(').replace(']', ')')
+def store_history(purl):
+  today = datetime.datetime.now().date()
+  global USER
+  insert_query = text("""
+  INSERT INTO Have_Read(user_name, purl, date)
+  VALUES (:user_name, :purl, :date);
+  """)
+  cursor = g.conn.execute(insert_query, user_name=USER.user_name, purl=purl, date=today)
+  cursor.close()
 
 if __name__ == "__main__":
   import click

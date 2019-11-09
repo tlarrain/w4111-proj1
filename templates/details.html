@@ -1,0 +1,29 @@
+<style>
+    table {
+  border-collapse: collapse;
+}
+
+table, th, td {
+  border: 1px solid black;
+}
+</style>
+
+<p>Title: {{paper.title}}</p>
+<p>URL: <a href="{{paper.purl}}", target="_blank">{{paper.purl}}</a></p>
+<p>Repository URL: <a href="{{paper.url}}", target="_blank">{{paper.url}}</a></p>
+<p>Model used: {{paper.model}}</p>
+<p>Authors:</p>
+<table>
+    <TR>
+        <TH>Last Name</TH>
+        <TH>First Name</TH>
+        <TH>Institution</TH>
+    </TR>
+    {% for author in authors %}
+    <TR>
+       <TD class="c2">{{author.last_name}}</a></TD>
+         <TD class="c2">{{author.first_name}}</a></TD>
+        <TD class="c2">{{author.name}}</a></TD>
+    </TR>
+    {% endfor %}
+</table>
