@@ -56,6 +56,7 @@ def teardown_request(exception):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     global USER
+    USER = {}
     form = LoginForm()
     if form.validate_on_submit():
         s = text("SELECT * FROM Users U WHERE U.user_name = :username AND U.password = :password")
@@ -128,8 +129,10 @@ def paper_details(purl):
 
 
 def store_history(purl):
-  today = datetime.datetime.now().date()
   global USER
+  if not USER:
+    return
+  today = datetime.datetime.now().date()
   get_query = text("""
   SELECT * FROM Have_Read HR
   WHERE HR.user_name = :user_name AND HR.purl = :purl AND HR.date = :date;
