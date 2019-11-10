@@ -8,8 +8,16 @@
 
 
 <body>
-  <h1>Welcome to the ML research finder!</h1>
-  <div><a href="/my-account">My account</a></div>
+    {% if user %}
+        <h1>Hi {{ user }}, welcome back to the ML research finder!</h1>
+    {% else %}
+        <h1>Welcome to the ML research finder!</h1>
+    {% endif %}
+    {% if user %}
+        <div><a href="/my-account">My account</a></div>
+    {% else %}
+        <div><a href="/login">Login</a></div>
+    {% endif %}
 {% block content %}
     <form action="" method="post" novalidate>
         {{ search_form.hidden_tag() }}

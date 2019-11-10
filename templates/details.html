@@ -10,7 +10,11 @@ table, th, td {
 
 <p>Title: {{paper.title}}</p>
 <p>URL: <a href="{{paper.purl}}", target="_blank">{{paper.purl}}</a></p>
-<p>Repository URL: <a href="{{paper.url}}", target="_blank">{{paper.url}}</a></p>
+{% if paper.url %}
+    <p>Repository URL: <a href="{{paper.url}}", target="_blank">{{paper.url}}</a></p>
+{% else %}
+    <p>Repository URL: N/A</p>
+{% endif %}
 <p>Model used: {{paper.model}}</p>
 <p>Authors:</p>
 <table>

@@ -13,14 +13,18 @@ import os
 from sqlalchemy import *
 from sqlalchemy.sql import text
 from flask import Flask, render_template, g, redirect
+from flask_login import LoginManager
 from forms import LoginForm, SearchForm
 import datetime
+import utils
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 app.config['SECRET_KEY'] = 'you-will-never-guess'
 DATABASEURI = "postgresql://tal2150:7764@35.243.220.243/proj1part2"
 engine = create_engine(DATABASEURI)
+login_manager = LoginManager()
+login_manager.init_app(app)
 
 USER = {}
 
@@ -66,24 +70,14 @@ def login():
         cursor.close()
     return render_template('login.html', title='Sign In', form=form)
 
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
-  """
-  request is a special object that Flask provides to access web request information:
-
-  request.method:   "GET" or "POST"
-  request.form:     if the browser submitted a form, this contains the data in the form
-  request.args:     dictionary of URL arguments, e.g., {a:1, b:2} for http://localhost?a=1&b=2
-
-  See its API: http://flask.pocoo.org/docs/0.10/api/#incoming-request-data
-  """
   global USER
-  if not USER:
-    return redirect('/login')
   search_form = SearchForm()
   if search_form.validate_on_submit():
     return search_results(search_form.searchTerms.data)
-  return render_template('index.html', title='Home', search_form=search_form)
+  return render_template('index.html', title='Home', search_form=search_form, user=USER.first_name if USER else '')
 
 
 @app.route('/results')
@@ -100,14 +94,15 @@ def search_results(search):
   cursor = g.conn.execute(s, keywords=tuple(search.split(' ')))
   results = []
   for result in cursor:
-    result = {"title": result[0], "purl": result[1].replace('/', '_slash_').replace('?','_qmark_')}
+    result = {"title": result[0], "purl": utils.encode_url(result[1])}
     results.append(result)
   cursor.close()
   return render_template('results.html', results=results)
 
+
 @app.route('/details/<purl>', methods=['GET', 'POST'])
 def paper_details(purl):
-  purl = purl.replace('_slash_', '/').replace('_qmark_', '?')
+  purl = utils.decode_url(purl)
   try:
     store_history(purl)
   except:
@@ -134,6 +129,7 @@ def paper_details(purl):
   cursor.close()
   return render_template('details.html', paper=paper, authors=authors)
 
+
 def store_history(purl):
   today = datetime.datetime.now().date()
   global USER
@@ -152,9 +148,12 @@ def store_history(purl):
   insert_cursor = g.conn.execute(insert_query, user_name=USER.user_name, purl=purl, date=today)
   insert_cursor.close()
 
+
 @app.route('/my-account', methods=['GET', 'POST'])
 def my_account():
   global USER
+  if not USER:
+      return redirect('/login')
   user_detail_query = text("""
   SELECT *
   FROM Users U
@@ -171,7 +170,7 @@ def my_account():
   history_cursor = g.conn.execute(history_query, username=USER.user_name)
   history = []
   for h in history_cursor:
-    h = {'title': h.title, 'purl': h.purl.replace('/', '_slash_').replace('?', '_qmark_'), 'date': h.date}
+    h = {'title': h.title, 'purl': utils.encode_url(h.purl), 'date': h.date}
     history.append(h)
   context = {'user': user, 'history': history}
   return render_template("my-account.html", **context)
