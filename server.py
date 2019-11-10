@@ -12,8 +12,7 @@ import os
   # accessible as a variable in index.html:
 from sqlalchemy import *
 from sqlalchemy.sql import text
-from sqlalchemy.pool import NullPool
-from flask import Flask, request, flash, render_template, g, redirect, Response
+from flask import Flask, render_template, g, redirect
 from forms import LoginForm, SearchForm
 import datetime
 
