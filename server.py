@@ -13,7 +13,6 @@ import os
 from sqlalchemy import *
 from sqlalchemy.sql import text
 from flask import Flask, render_template, g, redirect
-from flask_login import LoginManager
 from forms import LoginForm, SearchForm
 import datetime
 import utils
@@ -23,8 +22,6 @@ app = Flask(__name__, template_folder=tmpl_dir)
 app.config['SECRET_KEY'] = 'you-will-never-guess'
 DATABASEURI = "postgresql://tal2150:7764@35.243.220.243/proj1part2"
 engine = create_engine(DATABASEURI)
-login_manager = LoginManager()
-login_manager.init_app(app)
 
 USER = {}
 
