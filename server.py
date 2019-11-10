@@ -53,20 +53,6 @@ def teardown_request(exception):
   except Exception as e:
     pass
 
-#
-# @app.route is a decorator around index() that means:
-#   run index() whenever the user tries to access the "/" path using a GET request
-#
-# If you wanted the user to go to, for example, localhost:8111/foobar/ with POST or GET then you could use:
-#
-#       @app.route("/foobar/", methods=["POST", "GET"])
-#
-# PROTIP: (the trailing / in the path is important)
-# 
-# see for routing: http://flask.pocoo.org/docs/0.10/quickstart/#routing
-# see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
-#
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     global USER
@@ -166,6 +152,31 @@ def store_history(purl):
   """)
   insert_cursor = g.conn.execute(insert_query, user_name=USER.user_name, purl=purl, date=today)
   insert_cursor.close()
+
+@app.route('/my-account', methods=['GET', 'POST'])
+def my_account():
+  global USER
+  user_detail_query = text("""
+  SELECT *
+  FROM Users U
+  WHERE U.user_name = :username;
+  """)
+  user_cursor = g.conn.execute(user_detail_query, username=USER.user_name)
+  user = user_cursor.fetchone()
+  history_query = text("""
+  SELECT P.purl, P.title, HR.date
+  FROM Have_Read HR INNER JOIN Papers P ON P.purl = HR.purl
+  WHERE HR.user_name = :username
+  ORDER BY HR.date DESC
+  """)
+  history_cursor = g.conn.execute(history_query, username=USER.user_name)
+  history = []
+  for h in history_cursor:
+    h = {'title': h.title, 'purl': h.purl.replace('/', '_slash_').replace('?', '_qmark_'), 'date': h.date}
+    history.append(h)
+  context = {'user': user, 'history': history}
+  return render_template("my-account.html", **context)
+
 
 if __name__ == "__main__":
   import click

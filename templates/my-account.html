@@ -1,0 +1,46 @@
+<style>
+table {
+  border-collapse: collapse;
+}
+table, th, td {
+  border: 1px solid black;
+}
+.tag{
+    font-weight: bold;
+}
+</style>
+
+<div><a href="/">Go Back</a></div>
+<h2>User Details</h2>
+<table>
+    <TR>
+        <TD class="tag">Username: </TD>
+       <TD>{{user.user_name}}</TD>
+    </TR>
+    <TR>
+        <TD class="tag">First Name: </TD>
+       <TD>{{user.first_name}}</TD>
+    </TR>
+    <TR>
+        <TD class="tag">Last Name: </TD>
+       <TD>{{user.last_name}}</TD>
+    </TR>
+    <TR>
+        <TD class="tag">Date of Birth:</TD>
+        <TD>{{user.date_of_birth.strftime('%m-%d-%Y')}}</TD>
+    </TR>
+</table>
+
+<h2>History</h2>
+<table>
+    <TR>
+        <TH>Paper Title</TH>
+        <TH>Date Visited</TH>
+    </TR>
+    {% for paper in history %}
+    <TR>
+        <TD class="c2"><a href="details/{{paper.purl}}")>{{paper.title}}</a></TD>
+        <TD>{{paper.date.strftime('%m-%d-%Y')}}</TD>
+    </TR>
+    {% endfor %}
+</table>
