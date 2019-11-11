@@ -96,15 +96,32 @@ def index():
 @app.route('/results')
 def search_results(search):
   s = text("""
-      SELECT  P.title, PO.url, PO.purl
-      FROM Published_On PO INNER JOIN Papers P ON PO.purl = P.purl
-      WHERE PO.purl IN (
-        SELECT I.purl
-        FROM Is_Related_To I
-        WHERE I.keyword in :keywords
-      ); 
+      WITH FullTable AS
+      (SELECT *
+      FROM Papers P 
+      NATURAL JOIN Published_On AS PP
+      INNER JOIN Repositories R ON PP.url = R.url
+      NATURAL JOIN Is_Related_To
+      NATURAL JOIN Keywords 
+      NATURAL JOIN Published_By
+      NATURAL JOIN Authors
+      NATURAL JOIN Works_At
+      NATURAL JOIN Institutions)
+      SELECT DISTINCT FT.title
+      FROM FullTable FT 
+      WHERE FT.purl IN OR 
+      FT.title IN OR
+      FT.model LIKE '%' + :search.replace('', '%%') + '%' OR
+      FT.programming_language LIKE :keywords OR
+      FT.keyword LIKE '%' + :search.replace('', '%%') + '%' OR 
+      FT.first_name LIKE :keywords OR
+      FT.last_name LIKE :keywords OR
+      FT.name LIKE '%' + :search.replace('', '%%') + '%' OR
+      FT.type LIKE :keywords OR
+      FT.country LIKE :keywords OR
+      FT.city LIKE :keywords; 
           """)
-  cursor = g.conn.execute(s, keywords=tuple(search.split(' ')))
+  cursor = g.conn.execute(s, keywords=tuple('%' + search.split(' ') + '%'))
   results = []
   for result in cursor:
     results.append(result)
