@@ -1,4 +1,3 @@
-
 """
 Columbia's COMS W4111.001 Introduction to Databases
 Example Webserver
@@ -53,6 +52,10 @@ def teardown_request(exception):
   except Exception as e:
     pass
 
+@app.route('/')
+def default():
+  return redirect('/home')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     global USER
@@ -64,38 +67,65 @@ def login():
         names = []
         if cursor.rowcount == 1:
           USER = cursor.fetchone()
-          return redirect('/')
+          return redirect('/home')
         cursor.close()
     return render_template('login.html', title='Sign In', form=form)
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/home', methods=['GET', 'POST'])
 def index():
   global USER
   search_form = SearchForm()
   if search_form.validate_on_submit():
-    return search_results(search_form.searchTerms.data)
+    return redirect('/results/' + search_form.searchTerms.data)
   return render_template('index.html', title='Home', search_form=search_form, user=USER.first_name if USER else '')
 
 
-@app.route('/results')
+@app.route('/results/<search>')
 def search_results(search):
+  string_match = '%' + search.replace(' ', '%%') + '%'
   s = text("""
-      SELECT  P.title, P.purl
-      FROM Papers P
-      WHERE P.purl IN (
-        SELECT I.purl
-        FROM Is_Related_To I
-        WHERE I.keyword in :keywords
-      ); 
+      WITH FullTable AS
+      (SELECT P.purl, P.title, P.model, R.programming_language, K.keyword, A.first_name,
+      A.last_name, I.type, I.name, I.country, I.city 
+      FROM Papers P 
+      LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
+      LEFT OUTER JOIN Repositories R ON PO.url = R.url
+      LEFT OUTER JOIN Is_Related_To IRT ON PO.purl = IRT.purl
+      LEFT OUTER JOIN Keywords K ON IRT.keyword = K.keyword  
+      LEFT OUTER JOIN Published_By PB ON P.purl = PB.purl 
+      LEFT OUTER JOIN Authors A ON PB.aid = A.aid
+      LEFT OUTER JOIN Works_At WA ON WA.aid = A.aid
+      LEFT OUTER JOIN Institutions I ON I.iid = WA.iid)
+      SELECT DISTINCT FT.title, FT.purl
+      FROM FullTable FT 
+      WHERE 
+      FT.title LIKE :string_match OR
+      FT.model LIKE :string_match  OR
+      FT.programming_language LIKE :string_match OR
+      FT.keyword LIKE :string_match OR 
+      FT.first_name LIKE :string_match OR
+      FT.last_name LIKE :string_match OR
+      FT.name LIKE :string_match OR
+      FT.type LIKE :string_match OR
+      FT.country LIKE :string_match OR
+      FT.city LIKE :string_match; 
           """)
-  cursor = g.conn.execute(s, keywords=tuple(search.split(' ')))
+  cursor = g.conn.execute(s, string_match=string_match)
   results = []
-  for result in cursor:
-    result = {"title": result[0], "purl": utils.encode_url(result[1])}
-    results.append(result)
-  cursor.close()
+  for r in cursor:
+    results.append({'title': r.title, 'purl': utils.encode_url((r.purl))})
   return render_template('results.html', results=results)
+
+
+@app.route('/advanced')
+def advanced():
+  return render_template('advanced.html')
+
+
+@app.route('/advanced/search')
+def adv_search():
+  return render_template('advancedsearch.html')
 
 
 @app.route('/details/<purl>', methods=['GET', 'POST'])
@@ -171,7 +201,7 @@ def my_account():
     h = {'title': h.title, 'purl': utils.encode_url(h.purl), 'date': h.date}
     history.append(h)
   context = {'user': user, 'history': history}
-  return render_template("my-account.html", **context)
+  return render_template("my_account.html", **context)
 
 
 @app.route('/institutions', methods=['GET', 'POST'])
@@ -240,6 +270,7 @@ def author_detail(aid):
   FROM Authors A INNER JOIN Published_By PB ON A.aid = PB.aid
   INNER JOIN Papers P ON P.purl = PB.purl
   WHERE A.aid = :aid
+  ORDER BY P.number_of_citations DESC
   """)
   cursor = g.conn.execute(i_query, aid=aid)
   details = cursor.fetchone()
