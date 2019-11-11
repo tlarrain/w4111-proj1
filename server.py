@@ -95,41 +95,36 @@ def index():
 
 @app.route('/results')
 def search_results(search):
-  keywords = search.split(' ')
-  print(keywords)
-  for i in keywords:
-     keywords[ind] = '%' + key + '%'
+  string_match = '%' + search.replace(' ', '%%') + '%'
   s = text("""
       WITH FullTable AS
-      (SELECT *
+      (SELECT P.purl, P.title, P.model, R.programming_language, K.keyword, A.first_name,
+      A.last_name, I.type, I.name, I.country, I.city 
       FROM Papers P 
-      NATURAL JOIN Published_On AS PP
-      INNER JOIN Repositories R ON PP.url = R.url
-      NATURAL JOIN Is_Related_To
-      NATURAL JOIN Keywords 
-      NATURAL JOIN Published_By
-      NATURAL JOIN Authors
-      NATURAL JOIN Works_At
-      NATURAL JOIN Institutions)
+      LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
+      LEFT OUTER JOIN Repositories R ON PO.url = R.url
+      LEFT OUTER JOIN Is_Related_To IRT ON PO.purl = IRT.purl
+      LEFT OUTER JOIN Keywords K ON IRT.keyword = K.keyword  
+      LEFT OUTER JOIN Published_By PB ON P.purl = PB.purl 
+      LEFT OUTER JOIN Authors A ON PB.aid = A.aid
+      LEFT OUTER JOIN Works_At WA ON WA.aid = A.aid
+      LEFT OUTER JOIN Institutions I ON I.iid = WA.iid)
       SELECT DISTINCT FT.title
       FROM FullTable FT 
       WHERE 
-      FT.title LIKE ANY(:keywords) OR
-      FT.model LIKE ANY(:keywords)  OR
-      FT.programming_language LIKE ANY(:keywords) OR
-      FT.keyword LIKE ANY(:keywords) OR 
-      FT.first_name LIKE ANY(:keywords) OR
-      FT.last_name LIKE ANY(:keywords) OR
-      FT.name LIKE ANY(:keywords) OR
-      FT.type LIKE ANY(:keywords) OR
-      FT.country LIKE ANY(:keywords) OR
-      FT.city LIKE ANY(:keywords); 
+      FT.title LIKE :string_match OR
+      FT.model LIKE :string_match  OR
+      FT.programming_language LIKE :string_match OR
+      FT.keyword LIKE :string_match OR 
+      FT.first_name LIKE :string_match OR
+      FT.last_name LIKE :string_match OR
+      FT.name LIKE :string_match OR
+      FT.type LIKE :string_match OR
+      FT.country LIKE :string_match OR
+      FT.city LIKE :string_match; 
           """)
-  cursor = g.conn.execute(s, keywords)
-  #=tuple('%' + search.split(' ') + '%')
-  results = []
-  for result in cursor:
-    results.append(result)
+  cursor = g.conn.execute(s, string_match=string_match)
+  results = list(cursor.fetchall())
   return render_template('results.html', results=results)
 
 
