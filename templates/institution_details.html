@@ -1,0 +1,62 @@
+<script>
+function goBack() {
+  window.history.back();
+}
+</script>
+
+<div><button onclick="goBack()">Go Back</button></div>
+<h2>Institution Details</h2>
+<table>
+    <tr>
+        <td>Name:</td>
+        <td>{{details.name}}</td>
+    </tr>
+    <tr>
+        <td>Type:</td>
+        <td>{{details.type}}</td>
+    </tr>
+    <tr>
+        <td>Country:</td>
+        <td>{{details.country}}</td>
+    </tr>
+    <tr>
+        <td>City:</td>
+        <td>{{details.city}}</td>
+    </tr>
+    <tr>
+        <td>Zip Code:</td>
+        <td>{{details.zip}}</td>
+    </tr>
+    <tr>
+        <td>Street:</td>
+        <td>{{details.street}}</td>
+    </tr>
+    <tr>
+        <td>Street Number:</td>
+        <td>{{details.street_number}}</td>
+    </tr>
+</table>
+
+<h2>Related Authors</h2>
+
+<table>
+    {% for a in authors %}
+    <tr>
+        <td><a href="/author/{{a.aid}}">{{a.first_name}} {{a.last_name}}</a></td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h2>Papers Published</h2>
+<table>
+    <tr>
+        <th>Title</th>
+        <th>Citations</th>
+    </tr>
+    {% for p in papers %}
+    <tr>
+        <td><a href="/details/{{p.purl}}")>{{p.title}}</a></td>
+        <td>{{p.citations}}</td>
+    </tr>
+    {% endfor %}
+</table>

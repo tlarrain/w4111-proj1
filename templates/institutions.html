@@ -1,0 +1,16 @@
+<script>
+function goBack() {
+  window.history.back();
+}
+</script>
+
+<div><button onclick="goBack()">Go Back</button></div>
+<h2>Institutions</h2>
+<table>
+    {% for i in institutions %}
+    <tr>
+        <td>{{i.name}}</td>
+        <td><a href="/institution/{{i.iid}}">Details</a></td>
+    </tr>
+    {% endfor %}
+</table>
