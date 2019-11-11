@@ -119,7 +119,7 @@ def paper_details(purl):
       INNER JOIN Works_At WA ON WA.aid = A.aid
       INNER JOIN Institutions I ON I.iid = WA.iid
       WHERE P.purl = :purl;
-    """)g
+    """)
   cursor = g.conn.execute(s, purl=purl)
   authors = list(cursor.fetchall())
   cursor.close()
