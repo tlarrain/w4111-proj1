@@ -1,0 +1,32 @@
+<script>
+function goBack() {
+  window.history.back();
+}
+</script>
+
+<div><button onclick="goBack()">Go Back</button><a href="/"><button>Home</button></a></div>
+<h2>Author</h2>
+<table>
+    <tr>
+        <td>Name:</td>
+        <td>{{author.first_name}} {{author.last_name}}</td>
+    </tr>
+    <tr>
+        <td>Institution:</td>
+        <td><a href="/institution/{{author.iid}}">{{author.inst_name}}</a></td>
+    </tr>
+</table>
+
+<h2>Papers Published</h2>
+<table>
+    <tr>
+        <th>Title</th>
+        <th>Citations</th>
+    </tr>
+    {% for p in papers %}
+    <tr>
+        <td><a href="/details/{{p.purl}}")>{{p.title}}</a></td>
+        <td>{{p.citations}}</td>
+    </tr>
+    {% endfor %}
+</table>

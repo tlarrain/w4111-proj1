@@ -13,7 +13,7 @@ function goBack() {
 }
 </script>
 
-<div><button onclick="goBack()">Go Back</button></div>
+<div><button onclick="goBack()">Go Back</button><a href="/"><button>Home</button></a></div></div>
 
 <p>Title: {{paper.title}}</p>
 <p>URL: <a href="{{paper.purl}}", target="_blank">{{paper.purl}}</a></p>
@@ -26,15 +26,13 @@ function goBack() {
 <p>Authors:</p>
 <table>
     <TR>
-        <TH>Last Name</TH>
-        <TH>First Name</TH>
+        <TH>Name</TH>
         <TH>Institution</TH>
     </TR>
     {% for author in authors %}
     <TR>
-       <TD class="c2">{{author.last_name}}</a></TD>
-         <TD class="c2">{{author.first_name}}</a></TD>
-        <TD class="c2">{{author.name}}</a></TD>
+       <TD><a href="/author/{{author.aid}}">{{author.first_name}} {{author.last_name}}</a></TD>
+        <TD><a href="/institution/{{author.iid}}">{{author.name}}</a></TD>
     </TR>
     {% endfor %}
 </table>

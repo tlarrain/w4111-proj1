@@ -113,7 +113,7 @@ def paper_details(purl):
   cursor = g.conn.execute(s, purl=purl)
   paper = cursor.fetchone()
   s = text("""
-      SELECT  PB.aid, A.first_name, A.last_name, I.name
+      SELECT  PB.aid, A.first_name, A.last_name, I.iid, I.name
       FROM Papers P RIGHT OUTER JOIN Published_by PB ON P.purl = PB.purl
       INNER JOIN Authors A ON PB.aid = A.aid
       INNER JOIN Works_At WA ON WA.aid = A.aid
@@ -121,11 +121,9 @@ def paper_details(purl):
       WHERE P.purl = :purl;
     """)
   cursor = g.conn.execute(s, purl=purl)
-  authors = []
-  for c in cursor:
-    authors.append(c)
+  authors = list(cursor.fetchall())
   cursor.close()
-  return render_template('details.html', paper=paper, authors=authors)
+  return render_template('paper_details.html', paper=paper, authors=authors)
 
 
 def store_history(purl):
@@ -174,6 +172,69 @@ def my_account():
     history.append(h)
   context = {'user': user, 'history': history}
   return render_template("my-account.html", **context)
+
+
+@app.route('/institutions', methods=['GET', 'POST'])
+def institutions():
+  query = """
+    SELECT *
+    FROM Institutions I
+  """
+  institutions_cursor = g.conn.execute(query)
+  institutions = []
+  for i in institutions_cursor:
+    institutions.append(i)
+  return render_template('institutions.html', institutions=institutions)
+
+
+@app.route('/institution/<iid>', methods=['GET', 'POST'])
+def institution_detail(iid):
+  query = text("""
+  SELECT I.iid, I.name, I.type, I.country, I.city,
+    I.zip, I.street, I.street_number, A.aid, A.first_name, A.last_name,
+    P.title, P.purl, P.number_of_citations
+  FROM Institutions I INNER JOIN Works_At WA ON I.iid = WA.iid
+  INNER JOIN Authors A ON WA.aid = A.aid
+  INNER JOIN Published_By PB ON PB.aid = A.aid
+  INNER JOIN Papers P ON P.purl = PB.purl
+  WHERE I.iid = :iid
+  """)
+  institution_cursor = g.conn.execute(query, iid=iid)
+  authors = []
+  papers = []
+  for i in institution_cursor:
+    details = i
+    authors.append({'first_name': i.first_name, 'last_name': i.last_name, 'aid': i.aid})
+    papers.append({'title': i.title, 'purl': utils.encode_url(i.purl), 'citations': i.number_of_citations})
+  papers = map(dict, set(tuple(sorted(d.items())) for d in papers))
+  context = {'details': details, 'authors': authors, 'papers': papers}
+  institution_cursor.close()
+  return render_template('institution_details.html', **context)
+
+
+@app.route('/author/<aid>', methods=['GET', 'POST'])
+def author_detail(aid):
+  i_query = text("""
+  SELECT A.first_name, A.last_name, I.name as inst_name, I.iid
+  FROM Authors A INNER JOIN Works_At WA ON WA.aid = A.aid
+  INNER JOIN Institutions I ON I.iid = WA.iid
+  WHERE A.aid = :aid
+  """)
+  p_query = text("""
+  SELECT DISTINCT P.purl, P.title, P.number_of_citations
+  FROM Authors A INNER JOIN Published_By PB ON A.aid = PB.aid
+  INNER JOIN Papers P ON P.purl = PB.purl
+  WHERE A.aid = :aid
+  """)
+  cursor = g.conn.execute(i_query, aid=aid)
+  details = cursor.fetchone()
+  cursor = g.conn.execute(p_query, aid=aid)
+  papers = []
+  for p in cursor:
+    new_p = {'purl': utils.encode_url(p.purl), 'title': p.title, 'citations': p.number_of_citations}
+    papers.append(new_p)
+  context = {'author': details, 'papers': papers}
+  return render_template('author_details.html', **context)
 
 
 if __name__ == "__main__":
