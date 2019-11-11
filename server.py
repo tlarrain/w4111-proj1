@@ -189,26 +189,41 @@ def institutions():
 
 @app.route('/institution/<iid>', methods=['GET', 'POST'])
 def institution_detail(iid):
-  query = text("""
-  SELECT I.iid, I.name, I.type, I.country, I.city,
-    I.zip, I.street, I.street_number, A.aid, A.first_name, A.last_name,
-    P.title, P.purl, P.number_of_citations
-  FROM Institutions I INNER JOIN Works_At WA ON I.iid = WA.iid
-  INNER JOIN Authors A ON WA.aid = A.aid
-  INNER JOIN Published_By PB ON PB.aid = A.aid
-  INNER JOIN Papers P ON P.purl = PB.purl
+  i_query = text("""
+  SELECT *
+  FROM Institutions I
   WHERE I.iid = :iid
   """)
-  institution_cursor = g.conn.execute(query, iid=iid)
-  authors = []
+  institution_cursor = g.conn.execute(i_query, iid=iid)
+  details = institution_cursor.fetchone()
+  a_query = text("""
+      SELECT A.aid, A.first_name, A.last_name
+      FROM Authors A
+      INNER JOIN Works_At WA ON WA.aid = A.aid
+      INNER JOIN Institutions I ON I.iid = WA.iid
+      WHERE I.iid = :iid
+      ORDER BY A.last_name
+      """)
+  authors_cursor = g.conn.execute(a_query, iid=iid)
+  authors = authors_cursor.fetchall()
+  p_query = text("""
+      SELECT DISTINCT P.title, P.purl, P.number_of_citations
+      FROM Papers P
+      INNER JOIN Published_By PB ON PB.purl = P.purl
+      INNER JOIN Authors A ON PB.aid = A.aid
+      INNER JOIN Works_At WA ON WA.aid = A.aid
+      INNER JOIN Institutions I ON I.iid = WA.iid
+      WHERE I.iid = :iid
+      ORDER BY P.number_of_citations DESC
+      """)
+  p_cursor = g.conn.execute(p_query, iid=iid)
   papers = []
-  for i in institution_cursor:
-    details = i
-    authors.append({'first_name': i.first_name, 'last_name': i.last_name, 'aid': i.aid})
-    papers.append({'title': i.title, 'purl': utils.encode_url(i.purl), 'citations': i.number_of_citations})
-  papers = map(dict, set(tuple(sorted(d.items())) for d in papers))
+  for p in p_cursor:
+    papers.append({'title': p.title, 'purl': utils.encode_url(p.purl), 'citations': p.number_of_citations})
   context = {'details': details, 'authors': authors, 'papers': papers}
   institution_cursor.close()
+  authors_cursor.close()
+  p_cursor.close()
   return render_template('institution_details.html', **context)
 
 
