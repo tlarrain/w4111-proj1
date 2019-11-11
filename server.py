@@ -95,6 +95,10 @@ def index():
 
 @app.route('/results')
 def search_results(search):
+  keywords = search.split(' ')
+  print(keywords)
+  for i in keywords:
+     keywords[ind] = '%' + key + '%'
   s = text("""
       WITH FullTable AS
       (SELECT *
@@ -109,23 +113,33 @@ def search_results(search):
       NATURAL JOIN Institutions)
       SELECT DISTINCT FT.title
       FROM FullTable FT 
-      WHERE FT.purl IN OR 
-      FT.title IN OR
-      FT.model LIKE '%' + :search.replace('', '%%') + '%' OR
-      FT.programming_language LIKE :keywords OR
-      FT.keyword LIKE '%' + :search.replace('', '%%') + '%' OR 
-      FT.first_name LIKE :keywords OR
-      FT.last_name LIKE :keywords OR
-      FT.name LIKE '%' + :search.replace('', '%%') + '%' OR
-      FT.type LIKE :keywords OR
-      FT.country LIKE :keywords OR
-      FT.city LIKE :keywords; 
+      WHERE 
+      FT.title LIKE ANY(:keywords) OR
+      FT.model LIKE ANY(:keywords)  OR
+      FT.programming_language LIKE ANY(:keywords) OR
+      FT.keyword LIKE ANY(:keywords) OR 
+      FT.first_name LIKE ANY(:keywords) OR
+      FT.last_name LIKE ANY(:keywords) OR
+      FT.name LIKE ANY(:keywords) OR
+      FT.type LIKE ANY(:keywords) OR
+      FT.country LIKE ANY(:keywords) OR
+      FT.city LIKE ANY(:keywords); 
           """)
-  cursor = g.conn.execute(s, keywords=tuple('%' + search.split(' ') + '%'))
+  cursor = g.conn.execute(s, keywords)
+  #=tuple('%' + search.split(' ') + '%')
   results = []
   for result in cursor:
     results.append(result)
   return render_template('results.html', results=results)
+
+
+@app.route('/advanced')
+def advanced():
+    return render_template('advanced.html')
+
+@app.route('/advanced/search')
+def adv_search():
+    return render_template('advancedsearch.html')
 
 # Example of adding new data to the database
 @app.route('/add', methods=['POST'])

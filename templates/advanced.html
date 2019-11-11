@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<!-- saved from url=(0033)https://arxiv.org/search/advanced -->
+    
+        Advanced Search
+    
+</h1>    
+<div class="columns is-desktop">
+  <div class="column is-three-fifths-desktop">
+    
+    <div class="box">
+      <form method="GET" action="http://0.0.0.0:8111/advanced">
+        <input id="advanced" name="advanced" type="hidden" value="1">
+        
+        <section data-toggle="fieldset" id="terms-fieldset">
+          
+            <div class="field has-addons-tablet" data-toggle="fieldset-entry">
+              <div class="control fieldset-hidden-on-first-row" style="visibility:hidden;">
+                <span class="select">
+                  <label for="terms-0-operator" class="hidden-label">Boolean operator</label>
+                  <select default="AND" id="terms-0-operator" name="terms-0-operator"><option selected="" value="AND">AND</option><option value="OR">OR</option><option value="NOT">NOT</option></select>
+                </span>
+              </div>
+              <div class="control is-expanded">
+                <label for="terms-0-term" class="hidden-label">Search term</label>
+                
+                  <input class="input" id="terms-0-term" name="terms-0-term" placeholder="Search term..." type="text" value="">
+                
+                
+          
+        </section>
+
+        <section>
+          <fieldset class="fieldset ">
+            <legend class="legend">Papers</legend>
+            <div class="columns is-baseline">
+              <div class="column">
+                
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-papertitle" name="classification-papertitle" type="checkbox" value="y">
+      <label for="classification-papertitle">Title</label>          
+     <input class="input is-small" id="box-title" name="box-title" placeholder="Title..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-papermodel" name="classification-papermodel" type="checkbox" value="y">
+      <label for="classification-papermodel">Model</label>          
+     <input class="input is-small" id="box-model" name="box-model" placeholder="Model..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+<div class="field is-grouped">
+                  <div class="control">
+                    <div class="checkbox"> 
+                    	<div class="control is-datefield">
+                        <input id="date-published" name="date-published" type="checkbox" value="specific_year">
+                        <label for="date-published">Earliest Date Published (Year)</label>               
+                   
+                        <input class="input is-small" id="date-year" name="date-year" placeholder="Date Published..." type="text" value="">
+                    
+                    <script>
+                      $('#date-year').focus(function() {
+                        $('input[name="date-filter_by"]').attr('checked', false);
+                        $('input[value="specific_year"]').attr('checked', true);
+                      });
+                    </script>
+                    
+                  </div>
+                  
+</div>
+
+<div class="field is-grouped">
+                  <div class="control">
+                    <div class="checkbox"> 
+                    	<div class="control is-datefield">
+                        <input id="citations" name="citations" type="checkbox" value="integer">
+                        <label for="citations">Minimum number of citations</label>               
+                   
+                        <input class="input is-small" id="citations" name="citations" placeholder="Citations..." type="text" value="">
+                    
+                  </div>
+                  
+</div>
+
+
+
+
+
+          </fieldset>
+          <fieldset class="fieldset ">
+            <legend class="legend">Repositories</legend>
+                
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-programming" name="classification-programming" type="checkbox" value="y">
+      <label for="classification-programming">Programming Language</label>          
+     <input class="input is-small" id="box-programming" name="box-programming" placeholder="Programming Language..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+
+                
+<div class="field is-grouped">
+                  <div class="control">
+                    <div class="checkbox"> 
+                    	<div class="control is-datefield">
+                        <input id="date-online" name="date-online" type="checkbox" value="specific_year">
+                        <label for="date-online">Earliest Date Published (Year)</label>               
+                   
+                        <input class="input is-small" id="date-online" name="date-online" placeholder="Date Published..." type="text" value="">
+                    
+                    <script>
+                      $('#date-year').focus(function() {
+                        $('input[name="date-filter_by"]').attr('checked', false);
+                        $('input[value="specific_year"]').attr('checked', true);
+                      });
+                    </script>
+                    
+                  </div>
+                  
+</div>
+
+
+          </fieldset>
+
+          <fieldset class="fieldset ">
+            <legend class="legend">Keywords</legend>
+                
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-keywords" name="classification-keywords" type="checkbox" value="y">
+      <label for="classification-keywords">Keywords</label>          
+     <input class="input is-small" id="box-keywords" name="box-keywords" placeholder="Keywords..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+          </fieldset>
+          <fieldset class="fieldset ">
+            <legend class="legend">Author</legend>
+                
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-first" name="classification-first" type="checkbox" value="y">
+      <label for="classification-first">First name</label>          
+     <input class="input is-small" id="box-first" name="box-first" placeholder="First name..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-last" name="classification-last" type="checkbox" value="y">
+      <label for="classification-last">Last name</label>          
+     <input class="input is-small" id="box-last" name="box-last" placeholder="Last name..." type="text" value="">
+    </div>               
+   </div>
+</div>
+                
+
+
+
+          </fieldset>
+
+          <fieldset class="fieldset ">
+            <legend class="legend">Institutions</legend>
+                
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-name" name="classification-name" type="checkbox" value="y">
+      <label for="classification-name">Name</label>          
+     <input class="input is-small" id="box-name" name="box-name" placeholder="Name..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-country" name="classification-country" type="checkbox" value="y">
+      <label for="classification-country">Country</label>          
+     <input class="input is-small" id="box-country" name="box-country" placeholder="Country..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-city" name="classification-city" type="checkbox" value="y">
+      <label for="classification-city">City</label>          
+     <input class="input is-small" id="box-city" name="box-city" placeholder="City..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-zip" name="classification-zip" type="checkbox" value="y">
+      <label for="classification-zip">ZIP</label>          
+     <input class="input is-small" id="box-zip" name="box-zip" placeholder="ZIP..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-street" name="classification-street" type="checkbox" value="y">
+      <label for="classification-street">Street</label>          
+     <input class="input is-small" id="box-street" name="box-street" placeholder="Street..." type="text" value="">
+    </div>               
+   </div>
+</div>
+
+<div class="field is-horizontal">
+  <div class="control">
+    <div class="checkbox">
+      <input id="classification-streetno" name="classification-streetno" type="checkbox" value="y">
+      <label for="classification-streetno">Street Number</label>          
+     <input class="input is-small" id="box-streetno" name="box-streetno" placeholder="Street Number..." type="text" value="">
+    </div>               
+   </div>
+</div>
+              <div class="column">
+                
+                <div class="field is-horizontal is-grouped">
+                  <div class="control">
+                    <div class="checkbox">
+                      <input id="classification-type" name="classification-type" type="checkbox" value="y">
+                      <label for="classification-type">Type</label>
+                      <select id="classification-physics_archives" name="classification-physics_archives"><option selected="" value="all">all</option><option value="aca">academic</option><<option value="non-aca">non-academic</option></select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+                <script>
+                  $('select#classification-physics_archives').change(function() {
+                    $('input#classification-physics').attr('checked', true);
+                  });
+                </script>
+
+                
+
+
+          </fieldset>
+        </section>
+        <section>
+          <div class="level">
+            <div class="level-left">
+              <div class="level-item">
+                <div class="field is-horizontal is-grouped">
+                  <div class="control">
+                    <span class="select is-small">
+                    <div class="control">
+                   	<label for="size">Maximum results per page</label>
+                  	</div>
+                      <select id="size" name="size"><option value="5">5</option><option selected="" value="10">10</option><option value="50">50</option><option value="100">100</option></select>
+                    </span>
+                  </div>
+                </div>
+              </div>
+          </div>
+          <style>
+          	.bottom-three {
+          		margin-bottom: 3cm;
+          	}
+          </style>
+            <div class="level-right">
+              <button class="button is-link is-medium">Search</button>
+            </div>
+          </div>
+        </section>
+        <input type="hidden" name="order" value="-announced_date_first">
+        </form>
+      </div>
+    </div>
+    <div class="column">
+      
+  
+    
+  </footer>
+  
+<div id="atlwdg-blanket" class="atlwdg-blanket" style="display: none;"></div><div id="atlwdg-container" class="atlwdg-popup atlwdg-hidden"></div></body></html>
