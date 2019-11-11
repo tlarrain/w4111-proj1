@@ -8,21 +8,27 @@
 
 
 <body>
-  <h1>Some famous Computer Scientists</h1>
-  <div>{{data}}</div>
-
-  <div>
-    {% for n in data %}
-    <div>{{n}}</div>
-    {% endfor %}
-  </div>
-
-<p><a href="another">Go to the other page</a></p>
-
-<form method="POST" action="/add">
-<p>Name of new computer scientist: <input type="text" name="name"> <input type="submit" value="Add"></p>
-</form>
-
+    {% if user %}
+        <h1>Hi {{ user }}, welcome back to the ML research finder!</h1>
+    {% else %}
+        <h1>Welcome to the ML research finder!</h1>
+    {% endif %}
+    {% if user %}
+        <div><a href="/my-account">My account</a></div>
+    <div><a href="/login">Logout</a></div>
+    {% else %}
+        <div><a href="/login">Login</a></div>
+    {% endif %}
+{% block content %}
+    <form action="" method="post" novalidate>
+        {{ search_form.hidden_tag() }}
+        <p>
+            {{ search_form.searchTerms.label }}<br>
+            {{ search_form.searchTerms(size=32) }}
+        </p>
+        <p>{{ search_form.submit() }}</p>
+    </form>
+{% endblock %}
 </body>
 
 

@@ -11,42 +11,19 @@ Read about it online.
 import os
   # accessible as a variable in index.html:
 from sqlalchemy import *
-from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response
+from sqlalchemy.sql import text
+from flask import Flask, render_template, g, redirect
+from forms import LoginForm, SearchForm
+import datetime
+import utils
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
-
-
-#
-# The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
-#
-# XXX: The URI should be in the format of: 
-#
-#     postgresql://USER:PASSWORD@35.243.220.243/proj1part2
-#
-# For example, if you had username gravano and password foobar, then the following line would be:
-#
-#     DATABASEURI = "postgresql://gravano:foobar@35.243.220.243/proj1part2"
-#
+app.config['SECRET_KEY'] = 'you-will-never-guess'
 DATABASEURI = "postgresql://tal2150:7764@35.243.220.243/proj1part2"
-
-
-#
-# This line creates a database engine that knows how to connect to the URI above.
-#
 engine = create_engine(DATABASEURI)
 
-#
-# Example of running queries in your database
-# Note that this will probably not work if you already have a table named 'test' in your database, containing meaningful data. This is only an example showing you how to run queries in your database using SQLAlchemy.
-#
-engine.execute("""CREATE TABLE IF NOT EXISTS test (
-  id serial,
-  name text
-);""")
-engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
-
+USER = {}
 
 @app.before_request
 def before_request():
@@ -61,7 +38,8 @@ def before_request():
     g.conn = engine.connect()
   except:
     print("uh oh, problem connecting to database")
-    import traceback; traceback.print_exc()
+    import traceback
+    traceback.print_exc()
     g.conn = None
 
 @app.teardown_request
@@ -75,105 +53,188 @@ def teardown_request(exception):
   except Exception as e:
     pass
 
-
-#
-# @app.route is a decorator around index() that means:
-#   run index() whenever the user tries to access the "/" path using a GET request
-#
-# If you wanted the user to go to, for example, localhost:8111/foobar/ with POST or GET then you could use:
-#
-#       @app.route("/foobar/", methods=["POST", "GET"])
-#
-# PROTIP: (the trailing / in the path is important)
-# 
-# see for routing: http://flask.pocoo.org/docs/0.10/quickstart/#routing
-# see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
-#
-@app.route('/')
-def index():
-  """
-  request is a special object that Flask provides to access web request information:
-
-  request.method:   "GET" or "POST"
-  request.form:     if the browser submitted a form, this contains the data in the form
-  request.args:     dictionary of URL arguments, e.g., {a:1, b:2} for http://localhost?a=1&b=2
-
-  See its API: http://flask.pocoo.org/docs/0.10/api/#incoming-request-data
-  """
-
-  # DEBUG: this is debugging code to see what request looks like
-  print(request.args)
-
-
-  #
-  # example of a database query
-  #
-  cursor = g.conn.execute("SELECT name FROM test")
-  names = []
-  for result in cursor:
-    names.append(result['name'])  # can also be accessed using result[0]
-  cursor.close()
-
-  #
-  # Flask uses Jinja templates, which is an extension to HTML where you can
-  # pass data to a template and dynamically generate HTML based on the data
-  # (you can think of it as simple PHP)
-  # documentation: https://realpython.com/blog/python/primer-on-jinja-templating/
-  #
-  # You can see an example template in templates/index.html
-  #
-  # context are the variables that are passed to the template.
-  # for example, "data" key in the context variable defined below will be 
-  # accessible as a variable in index.html:
-  #
-  #     # will print: [u'grace hopper', u'alan turing', u'ada lovelace']
-  #     <div>{{data}}</div>
-  #     
-  #     # creates a <div> tag for each element in data
-  #     # will print: 
-  #     #
-  #     #   <div>grace hopper</div>
-  #     #   <div>alan turing</div>
-  #     #   <div>ada lovelace</div>
-  #     #
-  #     {% for n in data %}
-  #     <div>{{n}}</div>
-  #     {% endfor %}
-  #
-  context = dict(data = names)
-
-
-  #
-  # render_template looks in the templates/ folder for files.
-  # for example, the below file reads template/index.html
-  #
-  return render_template("index.html", **context)
-
-#
-# This is an example of a different path.  You can see it at:
-# 
-#     localhost:8111/another
-#
-# Notice that the function name is another() rather than index()
-# The functions for each app.route need to have different names
-#
-@app.route('/another')
-def another():
-  return render_template("another.html")
-
-
-# Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add():
-  name = request.form['name']
-  g.conn.execute('INSERT INTO test(name) VALUES (%s)', name)
-  return redirect('/')
-
-
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    abort(401)
-    this_is_never_executed()
+    global USER
+    USER = {}
+    form = LoginForm()
+    if form.validate_on_submit():
+        s = text("SELECT * FROM Users U WHERE U.user_name = :username AND U.password = :password")
+        cursor = g.conn.execute(s, username=form.username.data, password=form.password.data)
+        names = []
+        if cursor.rowcount == 1:
+          USER = cursor.fetchone()
+          return redirect('/')
+        cursor.close()
+    return render_template('login.html', title='Sign In', form=form)
+
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+  global USER
+  search_form = SearchForm()
+  if search_form.validate_on_submit():
+    return search_results(search_form.searchTerms.data)
+  return render_template('index.html', title='Home', search_form=search_form, user=USER.first_name if USER else '')
+
+
+@app.route('/results')
+def search_results(search):
+  s = text("""
+      SELECT  P.title, P.purl
+      FROM Papers P
+      WHERE P.purl IN (
+        SELECT I.purl
+        FROM Is_Related_To I
+        WHERE I.keyword in :keywords
+      ); 
+          """)
+  cursor = g.conn.execute(s, keywords=tuple(search.split(' ')))
+  results = []
+  for result in cursor:
+    result = {"title": result[0], "purl": utils.encode_url(result[1])}
+    results.append(result)
+  cursor.close()
+  return render_template('results.html', results=results)
+
+
+@app.route('/details/<purl>', methods=['GET', 'POST'])
+def paper_details(purl):
+  purl = utils.decode_url(purl)
+  try:
+    store_history(purl)
+  except:
+    pass
+  s = text("""
+        SELECT  P.title, P.purl, P.model, PO.url
+        FROM Papers P LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
+        WHERE P.purl = :purl;
+      """)
+  cursor = g.conn.execute(s, purl=purl)
+  paper = cursor.fetchone()
+  s = text("""
+      SELECT  PB.aid, A.first_name, A.last_name, I.iid, I.name
+      FROM Papers P RIGHT OUTER JOIN Published_by PB ON P.purl = PB.purl
+      INNER JOIN Authors A ON PB.aid = A.aid
+      INNER JOIN Works_At WA ON WA.aid = A.aid
+      INNER JOIN Institutions I ON I.iid = WA.iid
+      WHERE P.purl = :purl;
+    """)
+  cursor = g.conn.execute(s, purl=purl)
+  authors = list(cursor.fetchall())
+  cursor.close()
+  return render_template('paper_details.html', paper=paper, authors=authors)
+
+
+def store_history(purl):
+  global USER
+  if not USER:
+    return
+  today = datetime.datetime.now().date()
+  get_query = text("""
+  SELECT * FROM Have_Read HR
+  WHERE HR.user_name = :user_name AND HR.purl = :purl AND HR.date = :date;
+  """)
+  get_cursor = g.conn.execute(get_query, user_name=USER.user_name, purl=purl, date=today)
+  result = get_cursor.fetchone()
+  if result:
+    return
+  insert_query = text("""
+  INSERT INTO Have_Read(user_name, purl, date)
+  VALUES (:user_name, :purl, :date);
+  """)
+  insert_cursor = g.conn.execute(insert_query, user_name=USER.user_name, purl=purl, date=today)
+  insert_cursor.close()
+
+
+@app.route('/my-account', methods=['GET', 'POST'])
+def my_account():
+  global USER
+  if not USER:
+      return redirect('/login')
+  user_detail_query = text("""
+  SELECT *
+  FROM Users U
+  WHERE U.user_name = :username;
+  """)
+  user_cursor = g.conn.execute(user_detail_query, username=USER.user_name)
+  user = user_cursor.fetchone()
+  history_query = text("""
+  SELECT P.purl, P.title, HR.date
+  FROM Have_Read HR INNER JOIN Papers P ON P.purl = HR.purl
+  WHERE HR.user_name = :username
+  ORDER BY HR.date DESC
+  """)
+  history_cursor = g.conn.execute(history_query, username=USER.user_name)
+  history = []
+  for h in history_cursor:
+    h = {'title': h.title, 'purl': utils.encode_url(h.purl), 'date': h.date}
+    history.append(h)
+  context = {'user': user, 'history': history}
+  return render_template("my-account.html", **context)
+
+
+@app.route('/institutions', methods=['GET', 'POST'])
+def institutions():
+  query = """
+    SELECT *
+    FROM Institutions I
+  """
+  institutions_cursor = g.conn.execute(query)
+  institutions = []
+  for i in institutions_cursor:
+    institutions.append(i)
+  return render_template('institutions.html', institutions=institutions)
+
+
+@app.route('/institution/<iid>', methods=['GET', 'POST'])
+def institution_detail(iid):
+  query = text("""
+  SELECT I.iid, I.name, I.type, I.country, I.city,
+    I.zip, I.street, I.street_number, A.aid, A.first_name, A.last_name,
+    P.title, P.purl, P.number_of_citations
+  FROM Institutions I INNER JOIN Works_At WA ON I.iid = WA.iid
+  INNER JOIN Authors A ON WA.aid = A.aid
+  INNER JOIN Published_By PB ON PB.aid = A.aid
+  INNER JOIN Papers P ON P.purl = PB.purl
+  WHERE I.iid = :iid
+  """)
+  institution_cursor = g.conn.execute(query, iid=iid)
+  authors = []
+  papers = []
+  for i in institution_cursor:
+    details = i
+    authors.append({'first_name': i.first_name, 'last_name': i.last_name, 'aid': i.aid})
+    papers.append({'title': i.title, 'purl': utils.encode_url(i.purl), 'citations': i.number_of_citations})
+  papers = map(dict, set(tuple(sorted(d.items())) for d in papers))
+  context = {'details': details, 'authors': authors, 'papers': papers}
+  institution_cursor.close()
+  return render_template('institution_details.html', **context)
+
+
+@app.route('/author/<aid>', methods=['GET', 'POST'])
+def author_detail(aid):
+  i_query = text("""
+  SELECT A.first_name, A.last_name, I.name as inst_name, I.iid
+  FROM Authors A INNER JOIN Works_At WA ON WA.aid = A.aid
+  INNER JOIN Institutions I ON I.iid = WA.iid
+  WHERE A.aid = :aid
+  """)
+  p_query = text("""
+  SELECT DISTINCT P.purl, P.title, P.number_of_citations
+  FROM Authors A INNER JOIN Published_By PB ON A.aid = PB.aid
+  INNER JOIN Papers P ON P.purl = PB.purl
+  WHERE A.aid = :aid
+  """)
+  cursor = g.conn.execute(i_query, aid=aid)
+  details = cursor.fetchone()
+  cursor = g.conn.execute(p_query, aid=aid)
+  papers = []
+  for p in cursor:
+    new_p = {'purl': utils.encode_url(p.purl), 'title': p.title, 'citations': p.number_of_citations}
+    papers.append(new_p)
+  context = {'author': details, 'papers': papers}
+  return render_template('author_details.html', **context)
 
 
 if __name__ == "__main__":

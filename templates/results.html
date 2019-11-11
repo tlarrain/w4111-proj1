@@ -1,0 +1,26 @@
+<style>
+    table {
+  border-collapse: collapse;
+}
+
+table, th, td {
+  border: 1px solid black;
+}
+</style>
+<div><button onclick="goBack()">Go Back</button><a href="/"><button>Home</button></a></div></div>
+<h2>RESULTS:</h2>
+
+{% if results %}
+    <table>
+        <TR>
+            <TH>Title</TH>
+        </TR>
+    {% for item in results %}
+    <TR>
+       <TD class="c2"><a href="details/{{item.purl}}")>{{item.title}}</a></TD>
+    </TR>
+    {% endfor %}
+    </table>
+{% else %}
+    <div> No Results Found</div>
+{% endif %}
