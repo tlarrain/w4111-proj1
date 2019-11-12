@@ -12,7 +12,7 @@ import os
 from sqlalchemy import *
 from sqlalchemy.sql import text
 from flask import Flask, render_template, g, redirect
-from forms import LoginForm, SearchForm
+from forms import LoginForm, SearchForm, AdvancedSearchForm
 import datetime
 import utils
 
@@ -118,9 +118,13 @@ def search_results(search):
   return render_template('results.html', results=results)
 
 
-@app.route('/advanced')
+@app.route('/advanced', methods=['GET', 'POST'])
 def advanced():
-  return render_template('advanced.html')
+  search_form = AdvancedSearchForm()
+  if search_form.validate_on_submit():
+    ## Missing implementation of search query
+    print("OK")
+  return render_template('advanced.html', form=search_form)
 
 
 @app.route('/advanced/search')
