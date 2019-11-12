@@ -1,4 +1,4 @@
-/coms4111/
+coms4111/
 *.pyc
 */*/*/__pycache__/
 */*/__pycache__/

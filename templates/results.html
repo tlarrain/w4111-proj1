@@ -7,21 +7,17 @@ table, th, td {
   border: 1px solid black;
 }
 </style>
-
+<div><button onclick="goBack()">Go Back</button><a href="/"><button>Home</button></a></div></div>
 <h2>RESULTS:</h2>
 
 {% if results %}
     <table>
         <TR>
             <TH>Title</TH>
-            <TH>Github URL</TH>
-            <TH>Paper URL</TH>
         </TR>
     {% for item in results %}
     <TR>
-       <TD class="c2">{{item.title}}</TD>
-       <TD class="c3"><a href="{{item.url}}" target="_blank">{{item.url}}</a> </TD>
-       <TD class="c4"><a href="{{item.purl}}" target="_blank">{{item.purl}}</a></TD>
+       <TD class="c2"><a href="details/{{item.purl}}")>{{item.title}}</a></TD>
     </TR>
     {% endfor %}
     </table>

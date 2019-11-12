@@ -1,4 +1,3 @@
-
 """
 Columbia's COMS W4111.001 Introduction to Databases
 Example Webserver
@@ -28,7 +27,6 @@ def before_request():
   This function is run at the beginning of every web request 
   (every time you enter an address in the web browser).
   We use it to setup a database connection that can be used throughout the request.
-
   The variable g is globally accessible.
   """
   try:
@@ -80,11 +78,9 @@ def login():
 def index():
   """
   request is a special object that Flask provides to access web request information:
-
   request.method:   "GET" or "POST"
   request.form:     if the browser submitted a form, this contains the data in the form
   request.args:     dictionary of URL arguments, e.g., {a:1, b:2} for http://localhost?a=1&b=2
-
   See its API: http://flask.pocoo.org/docs/0.10/api/#incoming-request-data
   """
   search_form = SearchForm()
@@ -95,41 +91,36 @@ def index():
 
 @app.route('/results')
 def search_results(search):
-  keywords = search.split(' ')
-  print(keywords)
-  for i in keywords:
-     keywords[ind] = '%' + key + '%'
+  string_match = '%' + search.replace(' ', '%%') + '%'
   s = text("""
       WITH FullTable AS
-      (SELECT *
+      (SELECT P.purl, P.title, P.model, R.programming_language, K.keyword, A.first_name,
+      A.last_name, I.type, I.name, I.country, I.city 
       FROM Papers P 
-      NATURAL JOIN Published_On AS PP
-      INNER JOIN Repositories R ON PP.url = R.url
-      NATURAL JOIN Is_Related_To
-      NATURAL JOIN Keywords 
-      NATURAL JOIN Published_By
-      NATURAL JOIN Authors
-      NATURAL JOIN Works_At
-      NATURAL JOIN Institutions)
+      LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
+      LEFT OUTER JOIN Repositories R ON PO.url = R.url
+      LEFT OUTER JOIN Is_Related_To IRT ON PO.purl = IRT.purl
+      LEFT OUTER JOIN Keywords K ON IRT.keyword = K.keyword  
+      LEFT OUTER JOIN Published_By PB ON P.purl = PB.purl 
+      LEFT OUTER JOIN Authors A ON PB.aid = A.aid
+      LEFT OUTER JOIN Works_At WA ON WA.aid = A.aid
+      LEFT OUTER JOIN Institutions I ON I.iid = WA.iid)
       SELECT DISTINCT FT.title
       FROM FullTable FT 
       WHERE 
-      FT.title LIKE ANY(:keywords) OR
-      FT.model LIKE ANY(:keywords)  OR
-      FT.programming_language LIKE ANY(:keywords) OR
-      FT.keyword LIKE ANY(:keywords) OR 
-      FT.first_name LIKE ANY(:keywords) OR
-      FT.last_name LIKE ANY(:keywords) OR
-      FT.name LIKE ANY(:keywords) OR
-      FT.type LIKE ANY(:keywords) OR
-      FT.country LIKE ANY(:keywords) OR
-      FT.city LIKE ANY(:keywords); 
+      FT.title LIKE :string_match OR
+      FT.model LIKE :string_match  OR
+      FT.programming_language LIKE :string_match OR
+      FT.keyword LIKE :string_match OR 
+      FT.first_name LIKE :string_match OR
+      FT.last_name LIKE :string_match OR
+      FT.name LIKE :string_match OR
+      FT.type LIKE :string_match OR
+      FT.country LIKE :string_match OR
+      FT.city LIKE :string_match; 
           """)
-  cursor = g.conn.execute(s, keywords)
-  #=tuple('%' + search.split(' ') + '%')
-  results = []
-  for result in cursor:
-    results.append(result)
+  cursor = g.conn.execute(s, string_match=string_match)
+  results = list(cursor.fetchall())
   return render_template('results.html', results=results)
 
 
@@ -140,6 +131,27 @@ def advanced():
 @app.route('/advanced/search')
 def adv_search():
     return render_template('advancedsearch.html')
+
+@app.route('/my-account')
+def recommender():
+    s = text("""
+    SELECT P1.title, P1.purl
+    FROM Papers P1 NATURAL JOIN Is_Related_To I 
+    WHERE P1.purl = I.purl AND I.keyword IN (SELECT IR.keyword FROM Is_Related_To IR WHERE IR.purl IN (SELECT P.purl
+    FROM Papers P NATURAL JOIN Have_Read HR
+    WHERE P.purl = HR.purl AND HR.user_name = :user_name))
+    EXCEPT 
+    SELECT SUB.title, SUB.purl
+    FROM (SELECT * FROM Papers P2 NATURAL JOIN Have_Read HR2 
+    WHERE P2.purl = HR2.purl AND HR2.user_name = :user_name
+    ORDER BY HR2.date) AS SUB
+    LIMIT 3;
+    """)
+    cursor = g.conn.execute(s, username=user.username.data)
+    if cursor.rowcount == 0:
+        return redirect('/')
+    cursor.close()
+    return render_template('my-account.html', title='Recommendations', form=form)
 
 # Example of adding new data to the database
 @app.route('/add', methods=['POST'])
@@ -163,13 +175,9 @@ if __name__ == "__main__":
     """
     This function handles command line parameters.
     Run the server using:
-
         python server.py
-
     Show the help text using:
-
         python server.py --help
-
     """
 
     HOST, PORT = host, port

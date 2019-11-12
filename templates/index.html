@@ -1,4 +1,4 @@
- <html>
+<html>
   <style>
     body{ 
       font-size: 15pt;
@@ -8,7 +8,17 @@
 
 
 <body>
-  <h1>Welcome to easyML!</h1>
+    {% if user %}
+        <h1>Hi {{ user }}, welcome back to the ML research finder!</h1>
+    {% else %}
+        <h1>Welcome to the ML research finder!</h1>
+    {% endif %}
+    {% if user %}
+        <div><a href="/my-account">My account</a></div>
+    <div><a href="/login">Logout</a></div>
+    {% else %}
+        <div><a href="/login">Login</a></div>
+    {% endif %}
 {% block content %}
     <form action="" method="post" novalidate>
         {{ search_form.hidden_tag() }}
@@ -17,8 +27,9 @@
             {{ search_form.searchTerms(size=32) }}
         </p>
         <p>{{ search_form.submit() }}</p>
-        <a href="http://0.0.0.0:8111/advanced">Advanced Search</a></p>
     </form>
 {% endblock %}
 </body>
+
+
 </html>
