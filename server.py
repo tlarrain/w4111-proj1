@@ -32,7 +32,6 @@ def before_request():
   This function is run at the beginning of every web request 
   (every time you enter an address in the web browser).
   We use it to setup a database connection that can be used throughout the request.
-
   The variable g is globally accessible.
   """
   try:
@@ -77,11 +76,14 @@ def login():
 
 @app.route('/home', methods=['GET', 'POST'])
 def index():
-  global USER
-  search_form = SearchForm()
-  if search_form.validate_on_submit():
-    return redirect('/results/' + search_form.searchTerms.data)
-  return render_template('index.html', title='Home', search_form=search_form, user=USER.first_name if USER else '')
+    global USER
+    search_form = SearchForm()
+    recommendations = recommender()
+    if search_form.validate_on_submit():
+        return redirect('/results/' + search_form.searchTerms.data)
+    return render_template('index.html', title='Home', search_form=search_form,
+                           user=USER.first_name if USER else '',
+                           recommendations=recommendations)
 
 
 @app.route('/results/<search>')
@@ -173,8 +175,6 @@ def advanced():
 #pprint(vars(search_form))
 
 
-
-
 @app.route('/details/<purl>', methods=['GET', 'POST'])
 def paper_details(purl):
   purl = utils.decode_url(purl)
@@ -222,100 +222,125 @@ def store_history(purl):
 
 @app.route('/my-account', methods=['GET', 'POST'])
 def my_account():
-  global USER
-  if not USER:
-      return redirect('/login')
-  user_cursor = g.conn.execute(text("""
-  SELECT *
-  FROM Users U
-  WHERE U.user_name = :username;
-  """), username=USER.user_name)
-  user = user_cursor.fetchone()
-  history_cursor = g.conn.execute(text("""
-  SELECT P.purl, P.title, HR.date
-  FROM Have_Read HR INNER JOIN Papers P ON P.purl = HR.purl
-  WHERE HR.user_name = :username
-  ORDER BY HR.date DESC
-  """), username=USER.user_name)
-  history = []
-  for h in history_cursor:
-    h = {'title': h.title, 'purl': utils.encode_url(h.purl), 'date': h.date}
-    history.append(h)
-  context = {'user': user, 'history': history}
-  return render_template("my_account.html", **context)
+    global USER
+    if not USER:
+        return redirect('/login')
+    user_cursor = g.conn.execute(text("""
+    SELECT *
+    FROM Users U
+    WHERE U.user_name = :username;
+    """), username=USER.user_name)
+    user = user_cursor.fetchone()
+    history_cursor = g.conn.execute(text("""
+    SELECT P.purl, P.title, HR.date
+    FROM Have_Read HR INNER JOIN Papers P ON P.purl = HR.purl
+    WHERE HR.user_name = :username
+    ORDER BY HR.date DESC
+    """), username=USER.user_name)
+    recommendations = recommender()
+    history = []
+    for h in history_cursor:
+        h = {'title': h.title, 'purl': utils.encode_url(h.purl), 'date': h.date}
+        history.append(h)
+    context = {'user': user, 'history': history, 'recommendations': recommendations}
+    return render_template("my_account.html", **context)
 
 
 @app.route('/institutions', methods=['GET', 'POST'])
 def institutions():
-  institutions_cursor = g.conn.execute("""
-    SELECT *
-    FROM Institutions I
-  """)
-  institutions = []
-  for i in institutions_cursor:
-    institutions.append(i)
-  return render_template('institutions.html', institutions=institutions)
+    institutions_cursor = g.conn.execute("""
+      SELECT *
+      FROM Institutions I
+    """)
+    institutions_list = []
+    for i in institutions_cursor:
+        institutions_list.append(i)
+    return render_template('institutions.html', institutions=institutions_list)
 
 
 @app.route('/institution/<iid>', methods=['GET', 'POST'])
 def institution_detail(iid):
-  institution_cursor = g.conn.execute(text("""
-  SELECT *
-  FROM Institutions I
-  WHERE I.iid = :iid
-  """), iid=iid)
-  details = institution_cursor.fetchone()
-  authors_cursor = g.conn.execute(text("""
-      SELECT A.aid, A.first_name, A.last_name
-      FROM Authors A
-      INNER JOIN Works_At WA ON WA.aid = A.aid
-      INNER JOIN Institutions I ON I.iid = WA.iid
-      WHERE I.iid = :iid
-      ORDER BY A.last_name
-      """), iid=iid)
-  authors = authors_cursor.fetchall()
-  p_cursor = g.conn.execute(text("""
-      SELECT DISTINCT P.title, P.purl, P.number_of_citations
-      FROM Papers P
-      INNER JOIN Published_By PB ON PB.purl = P.purl
-      INNER JOIN Authors A ON PB.aid = A.aid
-      INNER JOIN Works_At WA ON WA.aid = A.aid
-      INNER JOIN Institutions I ON I.iid = WA.iid
-      WHERE I.iid = :iid
-      ORDER BY P.number_of_citations DESC
-      """), iid=iid)
-  papers = []
-  for p in p_cursor:
-    papers.append({'title': p.title, 'purl': utils.encode_url(p.purl), 'citations': p.number_of_citations})
-  context = {'details': details, 'authors': authors, 'papers': papers}
-  institution_cursor.close()
-  authors_cursor.close()
-  p_cursor.close()
-  return render_template('institution_details.html', **context)
+    institution_cursor = g.conn.execute(text("""
+    SELECT *
+    FROM Institutions I
+    WHERE I.iid = :iid
+    """), iid=iid)
+    details = institution_cursor.fetchone()
+    authors_cursor = g.conn.execute(text("""
+        SELECT A.aid, A.first_name, A.last_name
+        FROM Authors A
+        INNER JOIN Works_At WA ON WA.aid = A.aid
+        INNER JOIN Institutions I ON I.iid = WA.iid
+        WHERE I.iid = :iid
+        ORDER BY A.last_name
+        """), iid=iid)
+    authors = authors_cursor.fetchall()
+    p_cursor = g.conn.execute(text("""
+        SELECT DISTINCT P.title, P.purl, P.number_of_citations
+        FROM Papers P
+        INNER JOIN Published_By PB ON PB.purl = P.purl
+        INNER JOIN Authors A ON PB.aid = A.aid
+        INNER JOIN Works_At WA ON WA.aid = A.aid
+        INNER JOIN Institutions I ON I.iid = WA.iid
+        WHERE I.iid = :iid
+        ORDER BY P.number_of_citations DESC
+        """), iid=iid)
+    papers = []
+    for p in p_cursor:
+        papers.append({'title': p.title, 'purl': utils.encode_url(p.purl), 'citations': p.number_of_citations})
+    context = {'details': details, 'authors': authors, 'papers': papers}
+    institution_cursor.close()
+    authors_cursor.close()
+    p_cursor.close()
+    return render_template('institution_details.html', **context)
 
 
 @app.route('/author/<aid>', methods=['GET', 'POST'])
 def author_detail(aid):
-  cursor = g.conn.execute(text("""
-  SELECT A.first_name, A.last_name, I.name as inst_name, I.iid
-  FROM Authors A INNER JOIN Works_At WA ON WA.aid = A.aid
-  INNER JOIN Institutions I ON I.iid = WA.iid
-  WHERE A.aid = :aid
-  """), aid=aid)
-  details = cursor.fetchone()
-  cursor = g.conn.execute(text("""
-  SELECT DISTINCT P.purl, P.title, P.number_of_citations
-  FROM Authors A INNER JOIN Published_By PB ON A.aid = PB.aid
-  INNER JOIN Papers P ON P.purl = PB.purl
-  WHERE A.aid = :aid
-  ORDER BY P.number_of_citations DESC
-  """), aid=aid)
-  papers = []
-  for p in cursor:
-    new_p = {'purl': utils.encode_url(p.purl), 'title': p.title, 'citations': p.number_of_citations}
-    papers.append(new_p)
-  context = {'author': details, 'papers': papers}
-  return render_template('author_details.html', **context)
+    cursor = g.conn.execute(text("""
+    SELECT A.first_name, A.last_name, I.name as inst_name, I.iid
+    FROM Authors A INNER JOIN Works_At WA ON WA.aid = A.aid
+    INNER JOIN Institutions I ON I.iid = WA.iid
+    WHERE A.aid = :aid
+    """), aid=aid)
+    details = cursor.fetchone()
+    cursor = g.conn.execute(text("""
+    SELECT DISTINCT P.purl, P.title, P.number_of_citations
+    FROM Authors A INNER JOIN Published_By PB ON A.aid = PB.aid
+    INNER JOIN Papers P ON P.purl = PB.purl
+    WHERE A.aid = :aid
+    ORDER BY P.number_of_citations DESC
+    """), aid=aid)
+    papers = []
+    for p in cursor:
+        new_p = {'purl': utils.encode_url(p.purl), 'title': p.title, 'citations': p.number_of_citations}
+        papers.append(new_p)
+    context = {'author': details, 'papers': papers}
+    return render_template('author_details.html', **context)
+
+
+def recommender():
+    global USER
+    if not USER:
+      return []
+    s = text("""
+    SELECT P1.title, P1.purl
+    FROM Papers P1 NATURAL JOIN Is_Related_To I 
+    WHERE P1.purl = I.purl AND I.keyword IN (SELECT IR.keyword FROM Is_Related_To IR WHERE IR.purl IN (SELECT P.purl
+    FROM Papers P NATURAL JOIN Have_Read HR
+    WHERE P.purl = HR.purl AND HR.user_name = :user_name))
+    EXCEPT 
+    SELECT SUB.title, SUB.purl
+    FROM (SELECT * FROM Papers P2 NATURAL JOIN Have_Read HR2 
+    WHERE P2.purl = HR2.purl AND HR2.user_name = :user_name
+    ORDER BY HR2.date) AS SUB
+    LIMIT 3;
+    """)
+    cursor = g.conn.execute(s, user_name=USER.user_name)
+    recommendations = []
+    for r in cursor:
+        recommendations.append({'title': r.title, 'purl': utils.encode_url(r.purl)})
+    return recommendations
 
 
 if __name__ == "__main__":
@@ -330,13 +355,9 @@ if __name__ == "__main__":
     """
     This function handles command line parameters.
     Run the server using:
-
         python server.py
-
     Show the help text using:
-
         python server.py --help
-
     """
 
     HOST, PORT = host, port

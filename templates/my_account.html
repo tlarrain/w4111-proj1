@@ -45,4 +45,13 @@ table, th, td {
     {% endfor %}
 </table>
 
+<h2>Recommended for you</h2>
+<table>
+    {% for paper in recommendations %}
+    <TR>
+        <TD class="c2"><a href="details/{{paper.purl}}")>{{paper.title}}</a></TD>
+    </TR>
+    {% endfor %}
+</table>
+
 <div><a href="/login">Logout</a></div>
