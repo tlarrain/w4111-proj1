@@ -64,8 +64,8 @@ def login():
     USER = {}
     form = LoginForm()
     if form.validate_on_submit():
-        cursor = g.conn.execute("""SELECT * FROM Users U WHERE "
-        U.user_name = :username AND U.password = :password""",
+        cursor = g.conn.execute(text("""SELECT * FROM Users U WHERE
+        U.user_name = :username AND U.password = :password"""),
         username=form.username.data, password=form.password.data)
         names = []
         if cursor.rowcount == 1:
@@ -124,9 +124,10 @@ def advanced():
   if search_form.validate_on_submit():
     #TODO:
     if search_form.title:
-      cursor = g.conn.execute("""
+      cursor = g.conn.execute(text("""
       WITH FullTable AS
-      (SELECT *
+      (SELECT P.purl, P.title, P.model, P.number_of_citations, R.programming_language, K.keyword, A.first_name,
+      A.last_name, I.type, I.name, I.country, I.city, I.street, I.street_number, I.zip, R.rdate_published, P.date_published
       FROM Papers P
       LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
       LEFT OUTER JOIN Repositories R ON PO.url = R.url
@@ -136,34 +137,36 @@ def advanced():
       LEFT OUTER JOIN Authors A ON PB.aid = A.aid
       LEFT OUTER JOIN Works_At WA ON WA.aid = A.aid
       LEFT OUTER JOIN Institutions I ON I.iid = WA.iid)
-      SELECT DISTINCT FT.title
+      SELECT DISTINCT FT.title, FT.purl
       FROM FullTable FT
       WHERE
-      FT.title LIKE '%' || :title || '%' AND
-      FT.model LIKE '%' || :model || '%' AND
-      FT.3 LIKE :pdate AND 
+      FT.title LIKE '%%' || :title || '%%' AND
+      FT.model LIKE '%%' || :model || '%%' AND
+      FT.date_published >= :pdate AND 
       FT.number_of_citations >= :citations AND
-      FT.programming_language LIKE :prog AND
-      FT.10 LIKE :rdate AND 
-      FT.keyword LIKE :keywords AND
-      FT.first_name LIKE '%' || :first || '%' AND
-      FT.last_name LIKE '%' || :last || '%' AND
-      FT.name LIKE '%' || :institution || '%' AND
-      FT.type LIKE :insttype AND
-      FT.country LIKE '%' || :country || '%' AND
-      FT.city LIKE :instcity AND
-      FT.zip LIKE :instzip AND
-      FT.street LIKE :inststreet AND
-      FT.street_number LIKE :instno 
-      """, title=search_form.title, model=search_form.model, pdate= search_form.published_year,
-      citations = search_form.minimum_citations, prog = search_form.repo_programming_language,
-      rdate = search_form.repo_published_year, keywords = search_form.keywords, first = search_form.author_first_name,
-      last = search_form.author_last_name, institution = search_form.inst_name, insttype = search_form.inst_type,
-      instcountry = search_form.inst_country, instcity = search_form.inst_city, instzip = search_form.inst_zip,
-      inststreet = search_form.inst_street, instno = search_form.inst_street_no)
+      FT.programming_language LIKE '%%' || :prog || '%%' AND
+      FT.rdate_published >= :rdate AND 
+      FT.first_name LIKE '%%' || :first || '%%' AND
+      FT.last_name LIKE '%%' || :last || '%%' AND
+      FT.name LIKE '%%' || :institution || '%%' AND
+      FT.type IN :insttype AND
+      FT.country LIKE '%%' || :instcountry || '%%' AND
+      FT.city LIKE '%%' || :instcity || '%%' AND
+      FT.zip LIKE '%%' || :instzip || '%%' AND
+      FT.street LIKE '%%' || :inststreet || '%%' AND
+      FT.street_number LIKE '%%' || :instno || '%%';
+      """), title=search_form.title.data, model=search_form.model.data,
+      pdate= str(search_form.published_year.data if search_form.published_year.data else 1900)+'01'+'01',
+      citations = search_form.minimum_citations.data, prog = search_form.repo_programming_language.data,
+      rdate = str(search_form.repo_published_year.data if search_form.repo_published_year.data else 1900)+'01'+'01',
+      first = search_form.author_first_name.data,
+      last = search_form.author_last_name.data, institution = search_form.inst_name.data,
+      insttype = tuple(search_form.inst_type.data.split(' ')),
+      instcountry = search_form.inst_country.data, instcity = search_form.inst_city.data, instzip = search_form.inst_zip.data,
+      inststreet = search_form.inst_street.data, instno = search_form.inst_street_no.data)
     results = []
     for r in cursor:
-      results.append({'title': r.title})
+      results.append({'title': r.title, 'purl': utils.encode_url(r.purl)})
     return render_template('advancedsearch.html', results=results)
   return render_template('advanced.html', form=search_form)
 #pprint(vars(search_form))
@@ -178,20 +181,20 @@ def paper_details(purl):
     store_history(purl)
   except:
     pass
-  cursor = g.conn.execute("""
+  cursor = g.conn.execute(text("""
         SELECT  P.title, P.purl, P.model, PO.url
         FROM Papers P LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
         WHERE P.purl = :purl;
-      """, purl=purl)
+      """), purl=purl)
   paper = cursor.fetchone()
-  cursor = g.conn.execute("""
+  cursor = g.conn.execute(text("""
       SELECT  PB.aid, A.first_name, A.last_name, I.iid, I.name
       FROM Papers P RIGHT OUTER JOIN Published_by PB ON P.purl = PB.purl
       INNER JOIN Authors A ON PB.aid = A.aid
       INNER JOIN Works_At WA ON WA.aid = A.aid
       INNER JOIN Institutions I ON I.iid = WA.iid
       WHERE P.purl = :purl;
-    """, purl=purl)
+    """), purl=purl)
   authors = list(cursor.fetchall())
   cursor.close()
   return render_template('paper_details.html', paper=paper, authors=authors)
@@ -202,17 +205,17 @@ def store_history(purl):
   if not USER:
     return
   today = datetime.datetime.now().date()
-  get_cursor = g.conn.execute("""
+  get_cursor = g.conn.execute(text("""
   SELECT * FROM Have_Read HR
   WHERE HR.user_name = :user_name AND HR.purl = :purl AND HR.date = :date;
-  """, user_name=USER.user_name, purl=purl, date=today)
+  """), user_name=USER.user_name, purl=purl, date=today)
   result = get_cursor.fetchone()
   if result:
     return
-  insert_cursor = g.conn.execute("""
+  insert_cursor = g.conn.execute(text("""
   INSERT INTO Have_Read(user_name, purl, date)
   VALUES (:user_name, :purl, :date);
-  """, user_name=USER.user_name, purl=purl, date=today)
+  """), user_name=USER.user_name, purl=purl, date=today)
   insert_cursor.close()
 
 
@@ -221,18 +224,18 @@ def my_account():
   global USER
   if not USER:
       return redirect('/login')
-  user_cursor = g.conn.execute("""
+  user_cursor = g.conn.execute(text("""
   SELECT *
   FROM Users U
   WHERE U.user_name = :username;
-  """, username=USER.user_name)
+  """), username=USER.user_name)
   user = user_cursor.fetchone()
-  history_cursor = g.conn.execute("""
+  history_cursor = g.conn.execute(text("""
   SELECT P.purl, P.title, HR.date
   FROM Have_Read HR INNER JOIN Papers P ON P.purl = HR.purl
   WHERE HR.user_name = :username
   ORDER BY HR.date DESC
-  """, username=USER.user_name)
+  """), username=USER.user_name)
   history = []
   for h in history_cursor:
     h = {'title': h.title, 'purl': utils.encode_url(h.purl), 'date': h.date}
@@ -255,22 +258,22 @@ def institutions():
 
 @app.route('/institution/<iid>', methods=['GET', 'POST'])
 def institution_detail(iid):
-  institution_cursor = g.conn.execute("""
+  institution_cursor = g.conn.execute(text("""
   SELECT *
   FROM Institutions I
   WHERE I.iid = :iid
-  """, iid=iid)
+  """), iid=iid)
   details = institution_cursor.fetchone()
-  authors_cursor = g.conn.execute("""
+  authors_cursor = g.conn.execute(text("""
       SELECT A.aid, A.first_name, A.last_name
       FROM Authors A
       INNER JOIN Works_At WA ON WA.aid = A.aid
       INNER JOIN Institutions I ON I.iid = WA.iid
       WHERE I.iid = :iid
       ORDER BY A.last_name
-      """, iid=iid)
+      """), iid=iid)
   authors = authors_cursor.fetchall()
-  p_cursor = g.conn.execute("""
+  p_cursor = g.conn.execute(text("""
       SELECT DISTINCT P.title, P.purl, P.number_of_citations
       FROM Papers P
       INNER JOIN Published_By PB ON PB.purl = P.purl
@@ -279,7 +282,7 @@ def institution_detail(iid):
       INNER JOIN Institutions I ON I.iid = WA.iid
       WHERE I.iid = :iid
       ORDER BY P.number_of_citations DESC
-      """, iid=iid)
+      """), iid=iid)
   papers = []
   for p in p_cursor:
     papers.append({'title': p.title, 'purl': utils.encode_url(p.purl), 'citations': p.number_of_citations})
@@ -292,20 +295,20 @@ def institution_detail(iid):
 
 @app.route('/author/<aid>', methods=['GET', 'POST'])
 def author_detail(aid):
-  cursor = g.conn.execute("""
+  cursor = g.conn.execute(text("""
   SELECT A.first_name, A.last_name, I.name as inst_name, I.iid
   FROM Authors A INNER JOIN Works_At WA ON WA.aid = A.aid
   INNER JOIN Institutions I ON I.iid = WA.iid
   WHERE A.aid = :aid
-  """, aid=aid)
+  """), aid=aid)
   details = cursor.fetchone()
-  cursor = g.conn.execute("""
+  cursor = g.conn.execute(text("""
   SELECT DISTINCT P.purl, P.title, P.number_of_citations
   FROM Authors A INNER JOIN Published_By PB ON A.aid = PB.aid
   INNER JOIN Papers P ON P.purl = PB.purl
   WHERE A.aid = :aid
   ORDER BY P.number_of_citations DESC
-  """, aid=aid)
+  """), aid=aid)
   papers = []
   for p in cursor:
     new_p = {'purl': utils.encode_url(p.purl), 'title': p.title, 'citations': p.number_of_citations}
