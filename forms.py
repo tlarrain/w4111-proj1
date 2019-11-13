@@ -17,7 +17,7 @@ class AdvancedSearchForm(FlaskForm):
     title = StringField('Title')
     model = StringField('Model')
     published_year = IntegerField('Published Year', validators=[Optional()], default=1900)
-    minimum_citations = IntegerField('Minimum number of citations', default=0)
+    minimum_citations = IntegerField('Minimum number of citations', validators=[Optional()], default=0)
     repo_programming_language = StringField('Programming Language')
     repo_published_year = IntegerField('Published Year', validators=[Optional()], default=1900)
     keywords = StringField('Keywords')

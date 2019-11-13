@@ -157,7 +157,8 @@ def advanced():
       FT.street_number LIKE '%%' || :instno || '%%';
       """), title=search_form.title.data, model=search_form.model.data,
       pdate= str(search_form.published_year.data if search_form.published_year.data else 1900)+'01'+'01',
-      citations = search_form.minimum_citations.data, prog = search_form.repo_programming_language.data,
+      citations = search_form.minimum_citations.data if search_form.minimum_citations.data else 0,
+      prog = search_form.repo_programming_language.data,
       rdate = str(search_form.repo_published_year.data if search_form.repo_published_year.data else 1900)+'01'+'01',
       first = search_form.author_first_name.data,
       last = search_form.author_last_name.data, institution = search_form.inst_name.data,
