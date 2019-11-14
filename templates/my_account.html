@@ -10,8 +10,16 @@ table, th, td {
 }
 </style>
 
-<div><a href="/home">Go Back</a><a href="/home"><button>Home</button></a></div></div>
+<script>
+function goBack() {
+  window.history.back();
+}
+</script>
+
+<div><div><button onclick="goBack()">Go Back</button><a href="/home"><button>Home</button></a></div></div>
+<div><a href="/login">Logout</a></div>
 <h2>User Details</h2>
+
 <table>
     <TR>
         <TD class="tag">Username: </TD>
@@ -33,19 +41,24 @@ table, th, td {
 
 <h2>History</h2>
 <table>
-    <TR>
-        <TH>Paper Title</TH>
-        <TH>Date Visited</TH>
-    </TR>
-    {% for paper in history %}
-    <TR>
-        <TD class="c2"><a href="details/{{paper.purl}}")>{{paper.title}}</a></TD>
-        <TD>{{paper.date.strftime('%m-%d-%Y')}}</TD>
-    </TR>
-    {% endfor %}
+    {% if history %}
+        <TR>
+            <TH>Paper Title</TH>
+            <TH>Date Visited</TH>
+        </TR>
+        {% for paper in history %}
+        <TR>
+            <TD class="c2"><a href="details/{{paper.purl}}")>{{paper.title}}</a></TD>
+            <TD>{{paper.date.strftime('%m-%d-%Y')}}</TD>
+        </TR>
+        {% endfor %}
+    {% else %}
+        <p>No history for now. Go to our <a href="/home">Finder</a> to start searching!</p>
+    {% endif %}
 </table>
 
 <h2>Recommended for you</h2>
+{% if recommendations %}
 <table>
     {% for paper in recommendations %}
     <TR>
@@ -53,5 +66,8 @@ table, th, td {
     </TR>
     {% endfor %}
 </table>
+{% else %}
+    <p>We need some insights on your preferences! <a href="/home">Search</a> something so we can assist you</p>
+{% endif %}
 
-<div><a href="/login">Logout</a></div>
+

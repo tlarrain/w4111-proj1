@@ -8,14 +8,15 @@ A debugger such as "pdb" may be helpful for debugging.
 Read about it online.
 """
 import os
-  # accessible as a variable in index.html:
+# accessible as a variable in index.html:
 from sqlalchemy import *
 from sqlalchemy.sql import text
 from flask import Flask, render_template, g, redirect
 from forms import LoginForm, SearchForm, AdvancedSearchForm, RegisterForm
 import datetime
 import utils
-#from pprint import pprint
+
+# from pprint import pprint
 
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -26,32 +27,35 @@ engine = create_engine(DATABASEURI)
 
 USER = {}
 
+
 @app.before_request
 def before_request():
-  """
+    """
   This function is run at the beginning of every web request 
   (every time you enter an address in the web browser).
   We use it to setup a database connection that can be used throughout the request.
   The variable g is globally accessible.
   """
-  try:
-    g.conn = engine.connect()
-  except:
-    print("uh oh, problem connecting to database")
-    import traceback
-    traceback.print_exc()
-    g.conn = None
+    try:
+        g.conn = engine.connect()
+    except:
+        print("uh oh, problem connecting to database")
+        import traceback
+        traceback.print_exc()
+        g.conn = None
+
 
 @app.teardown_request
 def teardown_request(exception):
-  """
+    """
   At the end of the web request, this makes sure to close the database connection.
   If you don't, the database could run out of memory!
   """
-  try:
-    g.conn.close()
-  except Exception as e:
-    pass
+    try:
+        g.conn.close()
+    except Exception as e:
+        pass
+
 
 @app.route('/')
 def default():
@@ -74,6 +78,53 @@ def login():
     return render_template('login.html', title='Sign In', form=form)
 
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    global USER
+    form = RegisterForm()
+    mandatory_error = False
+    user_exists_error = False
+    if form.validate_on_submit():
+        user_created = create_user(form.username.data,
+                                   form.password.data,
+                                   form.first_name.data,
+                                   form.last_name.data,
+                                   form.date_of_birth.data.strftime('%Y-%m-%d'))
+        if user_created:
+            USER = {
+                'user_name': form.username.data,
+                'first_name': form.first_name.data,
+                'last_name': form.last_name.data,
+                'date_of_birth': form.date_of_birth.data.strftime('%Y-%m-%d')
+            }
+            return redirect('/home')
+        else:
+            user_exists_error = True
+            form.username.data = ''
+    else:
+        mandatory_error = True
+    context = {
+      'form': form,
+      'errors': {
+        'user_exists': user_exists_error,
+        'mandatory': mandatory_error,
+      }
+    }
+    return render_template('register.html', **context)
+
+
+def create_user(user_name, password, first_name, last_name, dob):
+    user = g.conn.execute(text("SELECT user_name from Users U WHERE U.user_name = :user_name"),
+                          user_name=user_name).fetchone()
+    if user:
+        return False
+    g.conn.execute(text("""
+  INSERT INTO Users (user_name, first_name, last_name, date_of_birth, password)
+  VALUES (:user_name, :first_name, :last_name, :date_of_birth, :password);
+  """), user_name=user_name, first_name=first_name, last_name=last_name, date_of_birth=dob, password=password)
+    return True
+
+
 @app.route('/home', methods=['GET', 'POST'])
 def index():
     global USER
@@ -84,12 +135,12 @@ def index():
     """).fetchall()
     applications = ['security', 'finance', 'medicine', 'recognition']
     context = {
-      'title': 'Home',
-      'search_form': search_form,
-      'user': USER.first_name if USER else '',
-      'recommendations': recommendations,
-      'models': models,
-      'applications': applications,
+        'title': 'Home',
+        'search_form': search_form,
+        'user': USER['first_name'] if USER else '',
+        'recommendations': recommendations,
+        'models': models,
+        'applications': applications,
     }
     if search_form.validate_on_submit():
         return redirect('/results/' + search_form.searchTerms.data)
@@ -137,10 +188,10 @@ def show_results(search_word):
 
 @app.route('/advanced', methods=['GET', 'POST'])
 def advanced():
-  search_form = AdvancedSearchForm()
-  if search_form.validate_on_submit():
-    if search_form.title:
-      cursor = g.conn.execute(text("""
+    search_form = AdvancedSearchForm()
+    if search_form.validate_on_submit():
+        if search_form.title:
+            cursor = g.conn.execute(text("""
       WITH FullTable AS
       (SELECT P.purl, P.title, P.model, P.number_of_citations, R.programming_language, K.keyword, A.first_name,
       A.last_name, I.type, I.name, I.country, I.city, I.street, I.street_number, I.zip, R.rdate_published, P.date_published
@@ -172,37 +223,42 @@ def advanced():
       FT.street LIKE '%%' || :inststreet || '%%' AND
       FT.street_number LIKE '%%' || :instno || '%%';
       """), title=search_form.title.data, model=search_form.model.data,
-      pdate= str(search_form.published_year.data if search_form.published_year.data else 1900)+'01'+'01',
-      citations = search_form.minimum_citations.data if search_form.minimum_citations.data else 0,
-      prog = search_form.repo_programming_language.data,
-      rdate = str(search_form.repo_published_year.data if search_form.repo_published_year.data else 1900)+'01'+'01',
-      first = search_form.author_first_name.data,
-      last = search_form.author_last_name.data, institution = search_form.inst_name.data,
-      insttype = tuple(search_form.inst_type.data.split(' ')),
-      instcountry = search_form.inst_country.data, instcity = search_form.inst_city.data, instzip = search_form.inst_zip.data,
-      inststreet = search_form.inst_street.data, instno = search_form.inst_street_no.data)
-    results = []
-    for r in cursor:
-      results.append({'title': r.title, 'purl': utils.encode_url(r.purl)})
-    return render_template('advancedsearch.html', results=results)
-  return render_template('advanced.html', form=search_form)
-#pprint(vars(search_form))
+                                    pdate=str(
+                                        search_form.published_year.data if search_form.published_year.data else 1900) + '01' + '01',
+                                    citations=search_form.minimum_citations.data if search_form.minimum_citations.data else 0,
+                                    prog=search_form.repo_programming_language.data,
+                                    rdate=str(
+                                        search_form.repo_published_year.data if search_form.repo_published_year.data else 1900) + '01' + '01',
+                                    first=search_form.author_first_name.data,
+                                    last=search_form.author_last_name.data, institution=search_form.inst_name.data,
+                                    insttype=tuple(search_form.inst_type.data.split(' ')),
+                                    instcountry=search_form.inst_country.data, instcity=search_form.inst_city.data,
+                                    instzip=search_form.inst_zip.data,
+                                    inststreet=search_form.inst_street.data, instno=search_form.inst_street_no.data)
+        results = []
+        for r in cursor:
+            results.append({'title': r.title, 'purl': utils.encode_url(r.purl)})
+        return render_template('advancedsearch.html', results=results)
+    return render_template('advanced.html', form=search_form)
+
+
+# pprint(vars(search_form))
 
 
 @app.route('/details/<purl>', methods=['GET', 'POST'])
 def paper_details(purl):
-  purl = utils.decode_url(purl)
-  try:
-    store_history(purl)
-  except:
-    pass
-  cursor = g.conn.execute(text("""
+    purl = utils.decode_url(purl)
+    try:
+        store_history(purl)
+    except:
+        pass
+    cursor = g.conn.execute(text("""
         SELECT  P.title, P.purl, P.model, PO.url
         FROM Papers P LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
         WHERE P.purl = :purl;
       """), purl=purl)
-  paper = cursor.fetchone()
-  cursor = g.conn.execute(text("""
+    paper = cursor.fetchone()
+    cursor = g.conn.execute(text("""
       SELECT  PB.aid, A.first_name, A.last_name, I.iid, I.name
       FROM Papers P RIGHT OUTER JOIN Published_by PB ON P.purl = PB.purl
       INNER JOIN Authors A ON PB.aid = A.aid
@@ -210,28 +266,28 @@ def paper_details(purl):
       INNER JOIN Institutions I ON I.iid = WA.iid
       WHERE P.purl = :purl;
     """), purl=purl)
-  authors = list(cursor.fetchall())
-  cursor.close()
-  return render_template('paper_details.html', paper=paper, authors=authors)
+    authors = list(cursor.fetchall())
+    cursor.close()
+    return render_template('paper_details.html', paper=paper, authors=authors)
 
 
 def store_history(purl):
-  global USER
-  if not USER:
-    return
-  today = datetime.datetime.now().date()
-  get_cursor = g.conn.execute(text("""
+    global USER
+    if not USER:
+        return
+    today = datetime.datetime.now().date()
+    get_cursor = g.conn.execute(text("""
   SELECT * FROM Have_Read HR
   WHERE HR.user_name = :user_name AND HR.purl = :purl AND HR.date = :date;
-  """), user_name=USER.user_name, purl=purl, date=today)
-  result = get_cursor.fetchone()
-  if result:
-    return
-  insert_cursor = g.conn.execute(text("""
+  """), user_name=USER['user_name'], purl=purl, date=today)
+    result = get_cursor.fetchone()
+    if result:
+        return
+    insert_cursor = g.conn.execute(text("""
   INSERT INTO Have_Read(user_name, purl, date)
   VALUES (:user_name, :purl, :date);
-  """), user_name=USER.user_name, purl=purl, date=today)
-  insert_cursor.close()
+  """), user_name=USER['user_name'], purl=purl, date=today)
+    insert_cursor.close()
 
 
 @app.route('/my-account', methods=['GET', 'POST'])
@@ -243,14 +299,14 @@ def my_account():
     SELECT *
     FROM Users U
     WHERE U.user_name = :username;
-    """), username=USER.user_name)
+    """), username=USER['user_name'])
     user = user_cursor.fetchone()
     history_cursor = g.conn.execute(text("""
     SELECT P.purl, P.title, HR.date
     FROM Have_Read HR INNER JOIN Papers P ON P.purl = HR.purl
     WHERE HR.user_name = :username
     ORDER BY HR.date DESC
-    """), username=USER.user_name)
+    """), username=USER['user_name'])
     recommendations = recommender()
     history = []
     for h in history_cursor:
@@ -336,7 +392,7 @@ def author_detail(aid):
 def recommender():
     global USER
     if not USER:
-      return []
+        return []
     s = text("""
     SELECT P1.title, P1.purl
     FROM Papers P1 NATURAL JOIN Is_Related_To I 
@@ -350,7 +406,7 @@ def recommender():
     ORDER BY HR2.date) AS SUB
     LIMIT 3;
     """)
-    cursor = g.conn.execute(s, user_name=USER.user_name)
+    cursor = g.conn.execute(s, user_name=USER['user_name'])
     recommendations = []
     for r in cursor:
         recommendations.append({'title': r.title, 'purl': utils.encode_url(r.purl)})
@@ -358,15 +414,16 @@ def recommender():
 
 
 if __name__ == "__main__":
-  import click
+    import click
 
-  @click.command()
-  @click.option('--debug', is_flag=True)
-  @click.option('--threaded', is_flag=True)
-  @click.argument('HOST', default='0.0.0.0')
-  @click.argument('PORT', default=8111, type=int)
-  def run(debug, threaded, host, port):
-    """
+
+    @click.command()
+    @click.option('--debug', is_flag=True)
+    @click.option('--threaded', is_flag=True)
+    @click.argument('HOST', default='0.0.0.0')
+    @click.argument('PORT', default=8111, type=int)
+    def run(debug, threaded, host, port):
+        """
     This function handles command line parameters.
     Run the server using:
         python server.py
@@ -374,8 +431,9 @@ if __name__ == "__main__":
         python server.py --help
     """
 
-    HOST, PORT = host, port
-    print("running on %s:%d" % (HOST, PORT))
-    app.run(host=HOST, port=PORT, debug=debug, threaded=threaded)
+        HOST, PORT = host, port
+        print("running on %s:%d" % (HOST, PORT))
+        app.run(host=HOST, port=PORT, debug=debug, threaded=threaded)
 
-  run()
+
+    run()

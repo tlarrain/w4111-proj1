@@ -80,6 +80,7 @@
     <div><a href="/login">Logout</a></div>
     {% else %}
         <div><a href="/login">Login</a></div>
+        <div><a href="/register">Register</a></div>
     {% endif %}
 
     {% block content %}
@@ -94,7 +95,7 @@
             <a href="/advanced">Advanced Search</a></p>
         </form>
     {% endblock %}
-    {%if user %}
+    {%if user and recommendations %}
         <h2>Recommended for you</h2>
         <table>
             {% for paper in recommendations %}
