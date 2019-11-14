@@ -150,12 +150,10 @@ def index():
 def search_term(search):
     string_match = '%%' + search.upper().replace(' ', '%%') + '%%'
     cursor = g.conn.execute(text("""WITH FullTable AS
-          (SELECT P.purl, P.title, P.model, R.programming_language, K.keyword, A.first_name,
+          (SELECT P.purl, P.title, P.model, K.keyword, A.first_name,
           A.last_name, I.type, I.name, I.country, I.city
           FROM Papers P
-          LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
-          LEFT OUTER JOIN Repositories R ON PO.url = R.url
-          LEFT OUTER JOIN Is_Related_To IRT ON PO.purl = IRT.purl
+          LEFT OUTER JOIN Is_Related_To IRT ON P.purl = IRT.purl
           LEFT OUTER JOIN Keywords K ON IRT.keyword = K.keyword
           LEFT OUTER JOIN Published_By PB ON P.purl = PB.purl
           LEFT OUTER JOIN Authors A ON PB.aid = A.aid
@@ -166,7 +164,6 @@ def search_term(search):
           WHERE
           upper(FT.title) LIKE :string_match OR
           upper(FT.model) LIKE :string_match  OR
-          upper(FT.programming_language) LIKE :string_match OR
           upper(FT.keyword) LIKE :string_match OR
           upper(FT.first_name) LIKE :string_match OR
           upper(FT.last_name) LIKE :string_match OR
