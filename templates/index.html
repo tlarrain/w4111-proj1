@@ -1,13 +1,75 @@
 <html>
   <style>
-    body{ 
+    body{
       font-size: 15pt;
       font-family: arial;
     }
+
+.sidenav {
+  height: 100%; /* Full-height: remove this if you want "auto" height */
+  width: 160px; /* Set the width of the sidebar */
+  position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+  z-index: 1; /* Stay on top */
+  top: 0; /* Stay at the top */
+  left: 0;
+  background-color: #111; /* Black */
+  overflow-x: hidden; /* Disable horizontal scroll */
+  padding: 20px 0 0 13px;
+}
+
+.sidenav-title {
+    color: #C8C8C8;
+}
+
+.list-item {
+    list-style: none;
+    padding-left: 12px;
+    font-size: 16px;
+}
+
+.link {
+    color: #818181;
+    text-decoration: none;
+    text-transform: capitalize;
+}
+
+.sidenav-item {
+  padding: 6px 8px 20px 8px;
+  text-decoration: none;
+  font-size: 25px;
+  color: #818181;
+  display: block;
+}
+
+
+.sidenav-item a:hover {
+  color: #f1f1f1;
+}
+
+.main {
+  margin-left: 160px;
+  padding: 10px 10px 0px 20px;
+}
   </style>
 
 
 <body>
+<div class="sidenav">
+    <h1 class="sidenav-title">Explore</h1>
+  <div class="sidenav-item" href="#">
+      Models
+      {% for m in models %}
+        <li  class="list-item"><a class="link" href="/results/{{ m[0] }}">{{ m[0] }}</a></li>
+      {% endfor %}
+  </div>
+  <div class="sidenav-item" href="#">
+      Applications
+      {% for a in applications %}
+        <li class="list-item"><a class="link" href="/results/{{ a }}">{{ a }}</a></li>
+      {% endfor %}
+  </div>
+</div>
+<div class="main">
     {% if user %}
         <h1>Hi {{ user }}, welcome back to easyML!</h1>
     {% else %}
@@ -42,7 +104,7 @@
             {% endfor %}
         </table>
     {% endif %}
-
+</div>
 </body>
 
 

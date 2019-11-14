@@ -12,7 +12,7 @@ import os
 from sqlalchemy import *
 from sqlalchemy.sql import text
 from flask import Flask, render_template, g, redirect
-from forms import LoginForm, SearchForm, AdvancedSearchForm
+from forms import LoginForm, SearchForm, AdvancedSearchForm, RegisterForm
 import datetime
 import utils
 #from pprint import pprint
@@ -55,7 +55,8 @@ def teardown_request(exception):
 
 @app.route('/')
 def default():
-  return redirect('/home')
+    return redirect('/home')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -65,11 +66,10 @@ def login():
     if form.validate_on_submit():
         cursor = g.conn.execute(text("""SELECT * FROM Users U WHERE
         U.user_name = :username AND U.password = :password"""),
-        username=form.username.data, password=form.password.data)
-        names = []
+                                username=form.username.data, password=form.password.data)
         if cursor.rowcount == 1:
-          USER = cursor.fetchone()
-          return redirect('/home')
+            USER = cursor.fetchone()
+            return redirect('/home')
         cursor.close()
     return render_template('login.html', title='Sign In', form=form)
 
@@ -79,52 +79,66 @@ def index():
     global USER
     search_form = SearchForm()
     recommendations = recommender()
+    models = g.conn.execute("""
+    SELECT DISTINCT P.model FROM Papers P;
+    """).fetchall()
+    applications = ['security', 'finance', 'medicine', 'recognition']
+    context = {
+      'title': 'Home',
+      'search_form': search_form,
+      'user': USER.first_name if USER else '',
+      'recommendations': recommendations,
+      'models': models,
+      'applications': applications,
+    }
     if search_form.validate_on_submit():
         return redirect('/results/' + search_form.searchTerms.data)
-    return render_template('index.html', title='Home', search_form=search_form,
-                           user=USER.first_name if USER else '',
-                           recommendations=recommendations)
+    return render_template('index.html', **context)
 
 
-@app.route('/results/<search>')
-def search_results(search):
-  string_match = '%' + search.replace(' ', '%%') + '%'
-  cursor = g.conn.execute("""WITH FullTable AS...
-      (SELECT P.purl, P.title, P.model, R.programming_language, K.keyword, A.first_name,
-      A.last_name, I.type, I.name, I.country, I.city
-      FROM Papers P
-      LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
-      LEFT OUTER JOIN Repositories R ON PO.url = R.url
-      LEFT OUTER JOIN Is_Related_To IRT ON PO.purl = IRT.purl
-      LEFT OUTER JOIN Keywords K ON IRT.keyword = K.keyword
-      LEFT OUTER JOIN Published_By PB ON P.purl = PB.purl
-      LEFT OUTER JOIN Authors A ON PB.aid = A.aid
-      LEFT OUTER JOIN Works_At WA ON WA.aid = A.aid
-      LEFT OUTER JOIN Institutions I ON I.iid = WA.iid)
-      SELECT DISTINCT FT.title, FT.purl
-      FROM FullTable FT
-      WHERE
-      FT.title LIKE :string_match OR
-      FT.model LIKE :string_match  OR
-      FT.programming_language LIKE :string_match OR
-      FT.keyword LIKE :string_match OR
-      FT.first_name LIKE :string_match OR
-      FT.last_name LIKE :string_match OR
-      FT.name LIKE :string_match OR
-      FT.type LIKE :string_match OR
-      FT.country LIKE :string_match OR
-      FT.city LIKE :string_match;""", string_match=string_match)
-  results = []
-  for r in cursor:
-    results.append({'title': r.title, 'purl': utils.encode_url((r.purl))})
-  return render_template('results.html', results=results)
+def search_term(search):
+    string_match = '%%' + search.replace(' ', '%%') + '%%'
+    cursor = g.conn.execute(text("""WITH FullTable AS
+          (SELECT P.purl, P.title, P.model, R.programming_language, K.keyword, A.first_name,
+          A.last_name, I.type, I.name, I.country, I.city
+          FROM Papers P
+          LEFT OUTER JOIN Published_On PO ON P.purl = PO.purl
+          LEFT OUTER JOIN Repositories R ON PO.url = R.url
+          LEFT OUTER JOIN Is_Related_To IRT ON PO.purl = IRT.purl
+          LEFT OUTER JOIN Keywords K ON IRT.keyword = K.keyword
+          LEFT OUTER JOIN Published_By PB ON P.purl = PB.purl
+          LEFT OUTER JOIN Authors A ON PB.aid = A.aid
+          LEFT OUTER JOIN Works_At WA ON WA.aid = A.aid
+          LEFT OUTER JOIN Institutions I ON I.iid = WA.iid)
+          SELECT DISTINCT FT.title, FT.purl
+          FROM FullTable FT
+          WHERE
+          FT.title LIKE :string_match OR
+          FT.model LIKE :string_match  OR
+          FT.programming_language LIKE :string_match OR
+          FT.keyword LIKE :string_match OR
+          FT.first_name LIKE :string_match OR
+          FT.last_name LIKE :string_match OR
+          FT.name LIKE :string_match OR
+          FT.type LIKE :string_match OR
+          FT.country LIKE :string_match OR
+          FT.city LIKE :string_match;"""), string_match=string_match)
+    results = []
+    for r in cursor:
+        results.append({'title': r.title, 'purl': utils.encode_url(r.purl)})
+    return results
+
+
+@app.route('/results/<search_word>')
+def show_results(search_word):
+    results = search_term(search_word)
+    return render_template('results.html', results=results)
 
 
 @app.route('/advanced', methods=['GET', 'POST'])
 def advanced():
   search_form = AdvancedSearchForm()
   if search_form.validate_on_submit():
-    #TODO:
     if search_form.title:
       cursor = g.conn.execute(text("""
       WITH FullTable AS
