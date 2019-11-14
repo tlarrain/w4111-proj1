@@ -22,6 +22,10 @@ All, in particular:
 - Organized Menu (with Models and Applications to explore)
 - Favorites of a user (log-in required)
 
+## Changes that have been made to the proposal in part1 and/or part2:
+
+The attribute name date_published of the table repositories has been changed to rdate_published. The TA has been informed on this change. 
+
 ## Two interesting web pages of our web application: 
 
 1. Advanced Search: 
@@ -36,8 +40,5 @@ The next interesting page is the home page when the user is logged in. This is b
 user receives tailored recommendations of new papers from an SQL based recommender system which makes use of the keywords related to previous queries. Second, the home page offers a menu divided into models and applications. These can be explored in case the user has no specific research fields in mind, but rather wants to explore some topics on machine learning. For instance, the user might have heard about Deep Learning and is now curious to see which applications have made use of this method and how the results turned out to be. Again, most of our components are connected so that the user can easily find a repository linked to a certain paper or the author, possibly in view of collaborations. 
 
 
-## Changes that have been made to the proposal in part1 and/or part2:
-
-The attribute name date_published of the table repositories has been changed to rdate_published. The TA has been informed on this change. 
 
 
