@@ -17,14 +17,13 @@ All, in particular:
 - Each paper is clickable to obtain e.g. the repository url if available
 - Information on authors (to get in touch with) and institutions are available 
 - Log-in and Registration page
-- User History
+- User History (substituted the user favorites)
 - Simple Recommender system (log-in required)
 - Organized Menu (with Models and Applications to explore)
-- Favorites of a user (log-in required)
 
 ## Changes that have been made to the proposal in part1 and/or part2:
 
-The attribute name date_published of the table repositories has been changed to rdate_published. The TA has been informed on this change. 
+The attribute name date_published of the table repositories has been changed to rdate_published. The TA has been informed on this change. Moreover, we have listed the full User History which replaces the user's favorites. This way the user has access to all the papers s/he has read.   
 
 ## Two interesting web pages of our web application: 
 
