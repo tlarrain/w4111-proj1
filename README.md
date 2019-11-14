@@ -1,22 +1,39 @@
 # Project 1, Part 3
+
 Authors: Tomas Larrain (tal2150), Lawan Rahim (lr2965)
 
-PostgreSQL database user: tal2150
+PostgreSQL database (user) to grade: tal2150
 
 Project URL: http://35.196.65.227:8111
 
-## Implemented elements of Part 1
-- Login with accounts
-- Keywords (general search)
+URL of the web application: 
+
+## Implemented elements of Part 1:
+
+All, in particular:
+
+- General search bar 
 - Advanced search
-- Simple Recommender system (login required)
+- Each paper is clickable to obtain e.g. the repository url if available
+- Information on authors (to get in touch with) and institutions are available 
+- Log-in and Registration page
 - User History
+- Simple Recommender system (log-in required)
+- Organized Menu (with Models and Applications to explore)
+- Favorites of a user (log-in required)
+
+## Two interesting web pages of our web application: 
+
+1. Advanced Search: 
+
+The first interesting web page of our web application is also the one that highlights the goal behind our 
+database the most. With the advanced search, the user is able to query our database in a user-oriented way. 
+The interface provides several input fields which are incorporated into SQL queries to tailor the search to the user's interests. For instance, a doctor who would like to learn about machine learning applications for cancer prediction can easily specify the context and moreover, select the programming language they are most familiar with. This gives novices a powerful tool to benefit from machine learning in an easy way. 
+
+2. Home page (while logged-in):
+
+The next interesting page is the home page when the user is logged in. This is because of two reasons. First, the
+user receives tailored recommendations of new papers from an SQL based recommender system which makes use of the keywords related to previous queries. Second, the home page offers a menu divided into models and applications. These can be explored in case the user has no specific research fields in mind, but rather wants to explore some topics on machine learning. For instance, the user might have heard about Deep Learning and is now curious to see which applications have made use of this method and how the results turned out to be. Again, most of our components are connected so that the user can easily find a repository linked to a certain paper or the author, possibly in view of collaborations. 
 
 
-## Not implemented elements of Part 1
-- Filter all papers:
-    - Models (SELECT DISTINCT P.model FROM Papers P)
-    - Applications (Marketing, Finance, Medicine, Recognition)
-- Register
-    - HTML File with Form (Tomas)
-    - INSERT query with params (Lawan)
+
