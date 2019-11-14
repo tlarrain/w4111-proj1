@@ -1,14 +1,37 @@
+<style>
+    .error {
+        color: red;
+    }
+</style>
 {% block content %}
-    <h1>Sign In</h1>
+    <h1>Register</h1>
+    {% if errors.mandatory %}
+        <p class="error">All fields are mandatory</p>
+    {% endif %}
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
         <p>
             {{ form.username.label }}<br>
             {{ form.username(size=32) }}
         </p>
+        {% if errors.user_exists %}
+            <p class="error">Ooops! seems like that user already exists, try another one</p>
+        {% endif %}
+        <p>
+            {{ form.first_name.label }}<br>
+            {{ form.first_name(size=20) }}
+        </p>
+        <p>
+            {{ form.last_name.label }}<br>
+            {{ form.last_name(size=20) }}
+        </p>
+        <p>
+            {{ form.date_of_birth.label }}<br>
+            {{ form.date_of_birth(class='datepicker') }}
+        </p>
         <p>
             {{ form.password.label }}<br>
-            {{ form.password(size=32) }}
+            {{ form.password(size=64) }}
         </p>
         <p>{{ form.submit() }}</p>
     </form>

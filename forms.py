@@ -1,6 +1,8 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, IntegerField, SelectField, DateField
+from wtforms import StringField, PasswordField, SubmitField, IntegerField, SelectField
 from wtforms.validators import DataRequired, Optional
+from wtforms.fields.html5 import DateField
+import datetime
 
 
 class LoginForm(FlaskForm):
@@ -14,8 +16,8 @@ class RegisterForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired()])
     last_name = StringField('Last Name', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
-    date_of_birth = DateField('Date of birth', validators=[DataRequired()])
-    submit = SubmitField('Sign In')
+    date_of_birth = DateField('Date of birth', format='%Y-%m-%d', validators=[DataRequired()], default=datetime.datetime(1995, 5, 1))
+    submit = SubmitField('Sign Up')
 
 
 class SearchForm(FlaskForm):

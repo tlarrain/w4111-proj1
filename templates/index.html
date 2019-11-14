@@ -27,7 +27,7 @@
     font-size: 16px;
 }
 
-.link {
+.sidebar-link {
     color: #818181;
     text-decoration: none;
     text-transform: capitalize;
@@ -50,6 +50,45 @@
   margin-left: 160px;
   padding: 10px 10px 0px 20px;
 }
+
+.link {
+    font-size: 10pt;
+}
+
+.submit {
+    margin-bottom: 5px;
+}
+
+.search-bar input {
+    width: 300px;
+    height: 32px;
+    border-radius: 19px;
+    border-color: grey;
+    margin-top: 10px;
+}
+
+.submit input {
+    color: #444444;
+    background: #F3F3F3;
+    border: 1px #DADADA solid;
+    padding: 5px 10px;
+    border-radius: 2px;
+    font-weight: bold;
+    font-size: 9pt;
+    outline: none;
+}
+
+.submit input:hover {
+    border: 1px #C6C6C6 solid;
+    box-shadow: 1px 1px 1px #EAEAEA;
+    color: #333333;
+    background: #F7F7F7;
+}
+
+.submit input:active {
+    box-shadow: inset 1px 1px 1px #DFDFDF;
+}
+
   </style>
 
 
@@ -59,13 +98,13 @@
   <div class="sidenav-item" href="#">
       Models
       {% for m in models %}
-        <li  class="list-item"><a class="link" href="/results/{{ m[0] }}">{{ m[0] }}</a></li>
+        <li  class="list-item"><a class="sidebar-link" href="/results/{{ m[0] }}">{{ m[0] }}</a></li>
       {% endfor %}
   </div>
   <div class="sidenav-item" href="#">
       Applications
       {% for a in applications %}
-        <li class="list-item"><a class="link" href="/results/{{ a }}">{{ a }}</a></li>
+        <li class="list-item"><a class="sidebar-link" href="/results/{{ a }}">{{ a }}</a></li>
       {% endfor %}
   </div>
 </div>
@@ -76,25 +115,27 @@
         <h1>Welcome to easyML!</h1>
     {% endif %}
     {% if user %}
-        <div><a href="/my-account">My account</a></div>
-    <div><a href="/login">Logout</a></div>
+        <div class="link"><a href="/my-account">My account</a></div>
+    <div class="link"><a href="/login">Logout</a></div>
     {% else %}
         <div><a href="/login">Login</a></div>
+        <div><a href="/register">Register</a></div>
     {% endif %}
 
     {% block content %}
         <form action="" method="post" novalidate>
             {{ search_form.hidden_tag() }}
-            <p>
+            <p class="search-bar">
                 {{ search_form.searchTerms.label }}<br>
                 {{ search_form.searchTerms(size=32) }}
             </p>
-            <p>{{ search_form.submit() }}</p>
+            <p class="submit">{{ search_form.submit() }}</p>
+            <p class="link"><a href="/advanced">Advanced Search</a></p>
 
-            <a href="/advanced">Advanced Search</a></p>
+
         </form>
     {% endblock %}
-    {%if user %}
+    {%if user and recommendations %}
         <h2>Recommended for you</h2>
         <table>
             {% for paper in recommendations %}

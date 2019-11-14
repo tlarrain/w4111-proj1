@@ -2,15 +2,16 @@
     <h1>Sign In</h1>
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
-        <p>
+        <tr>
             {{ form.username.label }}<br>
             {{ form.username(size=32) }}
-        </p>
+        </tr>
         <p>
             {{ form.password.label }}<br>
             {{ form.password(size=32) }}
         </p>
         <p>{{ form.submit() }}</p>
     </form>
+    <div>If you don't have an account yet, you can register <a href="/register">here!</a></div>
     <div>Go straight to the <a href="/home">Finder!</a></div>
 {% endblock %}
