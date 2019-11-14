@@ -148,7 +148,7 @@ def index():
 
 
 def search_term(search):
-    string_match = '%%' + search.replace(' ', '%%') + '%%'
+    string_match = '%%' + search.upper().replace(' ', '%%') + '%%'
     cursor = g.conn.execute(text("""WITH FullTable AS
           (SELECT P.purl, P.title, P.model, R.programming_language, K.keyword, A.first_name,
           A.last_name, I.type, I.name, I.country, I.city
@@ -164,16 +164,16 @@ def search_term(search):
           SELECT DISTINCT FT.title, FT.purl
           FROM FullTable FT
           WHERE
-          FT.title LIKE :string_match OR
-          FT.model LIKE :string_match  OR
-          FT.programming_language LIKE :string_match OR
-          FT.keyword LIKE :string_match OR
-          FT.first_name LIKE :string_match OR
-          FT.last_name LIKE :string_match OR
-          FT.name LIKE :string_match OR
-          FT.type LIKE :string_match OR
-          FT.country LIKE :string_match OR
-          FT.city LIKE :string_match;"""), string_match=string_match)
+          upper(FT.title) LIKE :string_match OR
+          upper(FT.model) LIKE :string_match  OR
+          upper(FT.programming_language) LIKE :string_match OR
+          upper(FT.keyword) LIKE :string_match OR
+          upper(FT.first_name) LIKE :string_match OR
+          upper(FT.last_name) LIKE :string_match OR
+          upper(FT.name) LIKE :string_match OR
+          upper(FT.type) LIKE :string_match OR
+          upper(FT.country) LIKE :string_match OR
+          upper(FT.city) LIKE :string_match;"""), string_match=string_match)
     results = []
     for r in cursor:
         results.append({'title': r.title, 'purl': utils.encode_url(r.purl)})
@@ -204,39 +204,45 @@ def advanced():
       LEFT OUTER JOIN Authors A ON PB.aid = A.aid
       LEFT OUTER JOIN Works_At WA ON WA.aid = A.aid
       LEFT OUTER JOIN Institutions I ON I.iid = WA.iid)
-      SELECT DISTINCT FT.title, FT.purl
+      SELECT DISTINCT FT.title, FT.purl, FT.programming_language, FT.rdate_published
       FROM FullTable FT
       WHERE
-      FT.title LIKE '%%' || :title || '%%' AND
-      FT.model LIKE '%%' || :model || '%%' AND
+      upper(FT.title) LIKE '%%' || :title || '%%' AND
+      upper(FT.model) LIKE '%%' || :model || '%%' AND
       FT.date_published >= :pdate AND 
       FT.number_of_citations >= :citations AND
-      FT.programming_language LIKE '%%' || :prog || '%%' AND
-      FT.rdate_published >= :rdate AND 
-      FT.first_name LIKE '%%' || :first || '%%' AND
-      FT.last_name LIKE '%%' || :last || '%%' AND
-      FT.name LIKE '%%' || :institution || '%%' AND
+      upper(FT.first_name) LIKE '%%' || :first || '%%' AND
+      upper(FT.last_name) LIKE '%%' || :last || '%%' AND
+      upper(FT.name) LIKE '%%' || :institution || '%%' AND
       FT.type IN :insttype AND
-      FT.country LIKE '%%' || :instcountry || '%%' AND
-      FT.city LIKE '%%' || :instcity || '%%' AND
-      FT.zip LIKE '%%' || :instzip || '%%' AND
-      FT.street LIKE '%%' || :inststreet || '%%' AND
-      FT.street_number LIKE '%%' || :instno || '%%';
-      """), title=search_form.title.data, model=search_form.model.data,
-                                    pdate=str(
-                                        search_form.published_year.data if search_form.published_year.data else 1900) + '01' + '01',
-                                    citations=search_form.minimum_citations.data if search_form.minimum_citations.data else 0,
-                                    prog=search_form.repo_programming_language.data,
-                                    rdate=str(
-                                        search_form.repo_published_year.data if search_form.repo_published_year.data else 1900) + '01' + '01',
-                                    first=search_form.author_first_name.data,
-                                    last=search_form.author_last_name.data, institution=search_form.inst_name.data,
-                                    insttype=tuple(search_form.inst_type.data.split(' ')),
-                                    instcountry=search_form.inst_country.data, instcity=search_form.inst_city.data,
-                                    instzip=search_form.inst_zip.data,
-                                    inststreet=search_form.inst_street.data, instno=search_form.inst_street_no.data)
+      upper(FT.country) LIKE '%%' || :instcountry || '%%' AND
+      upper(FT.city) LIKE '%%' || :instcity || '%%' AND
+      upper(FT.zip) LIKE '%%' || :instzip || '%%' AND
+      upper(FT.street) LIKE '%%' || :inststreet || '%%' AND
+      upper(FT.street_number) LIKE '%%' || :instno || '%%';
+      """), title=search_form.title.data.upper(), model=search_form.model.data.upper(),
+            pdate=str(
+                search_form.published_year.data if search_form.published_year.data else 1900) + '01' + '01',
+            citations=search_form.minimum_citations.data if search_form.minimum_citations.data else 0,
+            prog=search_form.repo_programming_language.data.upper(),
+            rdate=str(
+                search_form.repo_published_year.data if search_form.repo_published_year.data else 1900) + '01' + '01',
+            first=search_form.author_first_name.data.upper(),
+            last=search_form.author_last_name.data.upper(), institution=search_form.inst_name.data.upper(),
+            insttype=tuple(search_form.inst_type.data.split(' ')),
+            instcountry=search_form.inst_country.data.upper(), instcity=search_form.inst_city.data.upper(),
+            instzip=search_form.inst_zip.data.upper(),
+            inststreet=search_form.inst_street.data.upper(), instno=search_form.inst_street_no.data.upper())
         results = []
         for r in cursor:
+            if (search_form.repo_programming_language.data != '' and
+                    (not r.programming_language or
+                    r.programming_language.upper() != search_form.repo_programming_language.data.upper())):
+                continue
+            if (search_form.repo_published_year.data is not None and
+                    (not r.rdate_published or
+                    r.rdate_published.year < search_form.repo_published_year.data)):
+                continue
             results.append({'title': r.title, 'purl': utils.encode_url(r.purl)})
         return render_template('advancedsearch.html', results=results)
     return render_template('advanced.html', form=search_form)
