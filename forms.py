@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, IntegerField, SelectField
-from wtforms.validators import DataRequired, Optional
+from wtforms.validators import DataRequired, Optional, NumberRange
 from wtforms.fields.html5 import DateField
 import datetime
 
@@ -28,10 +28,10 @@ class SearchForm(FlaskForm):
 class AdvancedSearchForm(FlaskForm):
     title = StringField('Title')
     model = StringField('Model')
-    published_year = IntegerField('Published since year', validators=[Optional()], default=1900)
-    minimum_citations = IntegerField('Minimum number of citations', validators=[Optional()], default=0)
+    published_year = IntegerField('Published since year', validators=[Optional(), NumberRange(min=1900)])
+    minimum_citations = IntegerField('Minimum number of citations', validators=[Optional(), NumberRange(min=0)], default=0)
     repo_programming_language = StringField('Programming Language')
-    repo_published_year = IntegerField('Published since year', validators=[Optional()], default=1900)
+    repo_published_year = IntegerField('Published since year', validators=[Optional(), NumberRange(min=1900)])
     author_first_name = StringField('First Name')
     author_last_name = StringField('Last Name')
     inst_name = StringField('Name')
