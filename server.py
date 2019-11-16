@@ -15,7 +15,6 @@ from flask import Flask, render_template, g, redirect
 from forms import LoginForm, SearchForm, AdvancedSearchForm, RegisterForm
 import datetime
 import utils
-
 # from pprint import pprint
 
 
@@ -143,7 +142,7 @@ def index():
         'applications': applications,
     }
     if search_form.validate_on_submit():
-        return redirect('/results/' + search_form.searchTerms.data)
+        return redirect('/results/' + utils.encode_url(search_form.searchTerms.data))
     return render_template('index.html', **context)
 
 
@@ -179,6 +178,7 @@ def search_term(search):
 
 @app.route('/results/<search_word>')
 def show_results(search_word):
+    search_word = utils.decode_url(search_word)
     results = search_term(search_word)
     return render_template('results.html', results=results)
 
